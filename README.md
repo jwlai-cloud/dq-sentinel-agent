@@ -2,7 +2,9 @@
 
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-An autonomous data-quality agent that watches Fivetran pipelines and BigQuery data, diagnoses root cause with Gemini, and proposes remediations through Fivetran's MCP server — with a human approval gate before any write.
+An autonomous data-quality agent for financial-services data lakes. Watches Fivetran pipelines feeding daily regulatory reports, diagnoses root cause with Gemini, and proposes remediations through Fivetran's MCP server — with a human approval gate before any write. Built so the data engineer doesn't get paged at 3am for a sync miss that would silently break the morning compliance report.
+
+Demo narrative: "Greedy Bank" — a fictional mid-tier Australian bank whose APRA reporting depends on overnight Fivetran syncs.
 
 Built for the **[Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost.com/) — Fivetran track**. Deadline: 2026-06-11.
 
@@ -39,8 +41,21 @@ docs/PRD.md                  Product requirements (source of truth)
 openspec/                    Versioned architecture + capability specs
   changes/                   Proposed and applied changes
   specs/                     Current capability specs (populated as changes apply)
+demo-data/                   Seeded Greedy Bank demo data
+  generate.py                uv-runnable faker script (PEP-723 inline deps)
+  csv/                       Generated CSVs: 3 clean + 5 pre-broken variants
 LICENSE                      Apache-2.0
 ```
+
+## Demo data
+
+Reproducible Greedy Bank dataset (3 sheets, ~2,600 rows, AUD).
+
+```bash
+uv run demo-data/generate.py
+```
+
+Produces 3 clean CSVs (`account_holders`, `transactions`, `loan_products`) plus 5 pre-broken variants matching the break scenarios in PRD §8 (null-injection, duplicates, data-loss, distribution-shift, schema-rename). Seeded — same output every run.
 
 ## License
 

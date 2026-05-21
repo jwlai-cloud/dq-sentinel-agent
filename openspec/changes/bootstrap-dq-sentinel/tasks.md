@@ -1,13 +1,13 @@
 ## 1. Repo + Cloud Bootstrap (Week 1, days 1-2)
 
-- [ ] 1.1 Create `LICENSE` (Apache-2.0 verbatim) at repo root
-- [ ] 1.2 Create `README.md` stub with project name, one-liner, hosted URL placeholder, repo URL placeholder, license badge, hackathon track callout
-- [ ] 1.3 `git init`, first commit, push to GitHub `dq-sentinel-agent` (public), set License field in repo About so it renders in sidebar
-- [ ] 1.4 Create GCP project `dq-sentinel-hackathon`; enable Vertex AI, BigQuery, Secret Manager, Cloud Run APIs
-- [ ] 1.5 Provision BQ dataset `dq_sentinel`; create `baselines` table per spec `bigquery-dq-checks` §"Baseline storage contract"
+- [x] 1.1 Create `LICENSE` (Apache-2.0 verbatim) at repo root
+- [x] 1.2 Create `README.md` stub with project name, one-liner, hosted URL placeholder, repo URL placeholder, license badge, hackathon track callout
+- [x] 1.3 `git init`, first commit, push to GitHub `dq-sentinel-agent` (public), set License field in repo About so it renders in sidebar — https://github.com/jwlai-cloud/dq-sentinel-agent
+- [x] 1.4 Use existing GCP project `agent-era` (region `us-central1`); enable `aiplatform`, `bigquery`, `secretmanager`, `run`, `cloudbuild`, `iam` APIs
+- [x] 1.5 Provision BQ dataset `agent-era.dq_sentinel` in `us-central1`; create `baselines` table (PARTITION BY DATE(captured_at), CLUSTER BY connection_id, table_name, metric) per spec `bigquery-dq-checks` §"Baseline storage contract"
 - [ ] 1.6 Create Fivetran free-tier account; confirm whether on-demand `sync_connection` is allowed on free tier (resolves Open Question 1 in design.md)
 - [ ] 1.7 Stand up Sheets → Fivetran → BQ for `customers`, `orders`, `products` sheets (PRD §8)
-- [ ] 1.8 Store Fivetran API key in Secret Manager as `FIVETRAN_API_KEY`
+- [ ] 1.8 Store Fivetran API key in Secret Manager as `FIVETRAN_API_KEY` in project `agent-era`
 
 ## 2. Agent Builder + Fivetran MCP Spike (Week 1, days 3-5)
 

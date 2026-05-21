@@ -251,6 +251,14 @@ After remediation executes:
 
 ## 8. Demo Data Setup
 
+### Narrative: "Greedy Bank" — Daily Regulatory Reporting
+
+The demo is framed as a mid-tier Australian bank (fictional **"Greedy Bank"**) whose nightly Fivetran pipelines feed BigQuery tables used to generate daily APRA regulatory reports. When a pipeline silently breaks overnight, the morning report is wrong — a compliance incident with regulator-fine consequences.
+
+The data engineer protagonist runs DQ Sentinel at 9am, the agent catches the issue before the reporting filing window closes, and proposes a one-click remediation.
+
+All amounts are AUD (the billing-account default for this build).
+
 ### Source: Google Sheets → Fivetran → BigQuery
 
 **Why Google Sheets:**
@@ -263,20 +271,22 @@ After remediation executes:
 
 | Sheet/Table | Columns | Rows | Purpose |
 |---|---|---|---|
-| `customers` | id, name, email, signup_date, country | ~500 | Null rate, duplicate detection |
-| `orders` | id, customer_id, amount, currency, order_date, status | ~2000 | Row count anomaly, distribution shift |
-| `products` | id, name, category, price, is_active | ~100 | Schema change demo |
+| `account_holders` | account_id, full_name, email, opened_at, country_code, kyc_status | ~500 | Null rate (KYC = AML signal), duplicate detection |
+| `transactions` | txn_id, account_id, amount_aud, currency, txn_date, status, channel | ~2000 | Row count anomaly, distribution shift, freshness |
+| `loan_products` | product_id, product_name, category, base_apr, is_active | ~100 | Schema change demo |
+
+Demo data is generated reproducibly by `demo-data/generate.py` (seeded faker). Clean CSVs + pre-broken variant CSVs are produced from the same script so the demo is replayable.
 
 ### Pre-scripted "Break" Scenarios for Demo
 
-| Scenario | How to Break | What Agent Detects |
-|---|---|---|
-| **Schema drift** | Rename `email` → `user_email` in sheet | Schema mismatch + null spike on old column |
-| **Data loss** | Delete 50% of rows in `orders` sheet | Row count anomaly (50% drop) |
-| **Null injection** | Clear `amount` column for recent orders | Null rate spike on `amount` |
-| **Duplicate injection** | Copy-paste 100 rows in `customers` | Duplicate PK detection |
-| **Sync failure** | Revoke Fivetran's Google Sheets access | Connection broken, sync failure |
-| **Freshness violation** | Pause Fivetran connector for 2+ hours | Freshness SLA exceeded |
+| Scenario | How to Break | What Agent Detects | FinServ stake |
+|---|---|---|---|
+| **Schema drift** | Rename `base_apr` → `headline_apr` in `loan_products` sheet | Schema mismatch + null spike on old column | Rate-card report breaks; wrong rates published to customers |
+| **Data loss** | Delete most-recent-day rows from `transactions` | Row count anomaly (~18% drop) | Daily APRA report under-reports turnover |
+| **Null injection** | Clear `kyc_status` for recent `account_holders` | Null rate spike on `kyc_status` | AML compliance dashboard shows unverified accounts |
+| **Duplicate injection** | Copy-paste 50 rows in `account_holders` | Duplicate PK detection | AML duplicate-account false-positive ticket spike |
+| **Sync failure** | Revoke Fivetran's Google Sheets access | Connection broken, sync failure | Overnight reg-data refresh fails silently |
+| **Freshness violation** | Pause Fivetran connector for 2+ hours | Freshness SLA exceeded | Treasury sees stale cash position |
 
 ---
 
@@ -313,6 +323,7 @@ After remediation executes:
 - [ ] DQ dashboard UI (table health heatmap)
 - [ ] Duplicate detection check
 - [ ] Distribution shift check
+- [ ] **PII/compliance posture check** — agent enumerates columns via Fivetran MCP, uses Gemini to classify columns that look like PII/PCI but aren't masked, scores each connection's compliance posture. Detect-only for P1 (no auto-masking — that lands as P2 via `update_connection_column_config`).
 
 ### P2 — Stretch Goals
 

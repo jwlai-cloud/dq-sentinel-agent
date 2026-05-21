@@ -1,0 +1,101 @@
+product_id,product_name,category,headline_apr,is_active
+LP-001,Greedy Auto Premium,auto,14.12,False
+LP-002,Greedy Credit Card Standard,credit_card,6.9,True
+LP-003,Greedy Business Variable,business,8.03,True
+LP-004,Greedy Business Variable,business,7.85,True
+LP-005,Greedy Mortgage Fixed 5yr,mortgage,12.96,True
+LP-006,Greedy Mortgage Starter,mortgage,7.38,True
+LP-007,Greedy Business Fixed 3yr,business,11.02,True
+LP-008,Greedy Credit Card Fixed 3yr,credit_card,8.32,False
+LP-009,Greedy Business Variable,business,13.24,True
+LP-010,Greedy Auto Premium,auto,10.84,True
+LP-011,Greedy Personal Variable,personal,7.03,True
+LP-012,Greedy Auto Green,auto,9.42,True
+LP-013,Greedy Auto Variable,auto,10.13,False
+LP-014,Greedy Credit Card Green,credit_card,11.77,False
+LP-015,Greedy Mortgage Fixed 5yr,mortgage,12.79,True
+LP-016,Greedy Personal Fixed 3yr,personal,8.49,True
+LP-017,Greedy Auto Fixed 3yr,auto,9.73,True
+LP-018,Greedy Personal Premium,personal,10.2,True
+LP-019,Greedy Credit Card Fixed 3yr,credit_card,13.7,True
+LP-020,Greedy Business Variable,business,14.71,True
+LP-021,Greedy Credit Card Fixed 3yr,credit_card,14.48,True
+LP-022,Greedy Mortgage Premium,mortgage,4.83,False
+LP-023,Greedy Auto Standard,auto,6.75,True
+LP-024,Greedy Business Fixed 3yr,business,5.86,True
+LP-025,Greedy Mortgage Fixed 5yr,mortgage,11.25,True
+LP-026,Greedy Credit Card Green,credit_card,7.63,False
+LP-027,Greedy Credit Card Standard,credit_card,6.35,True
+LP-028,Greedy Business Pro,business,6.91,False
+LP-029,Greedy Mortgage Premium,mortgage,10.06,False
+LP-030,Greedy Credit Card Starter,credit_card,5.44,True
+LP-031,Greedy Mortgage Pro,mortgage,13.82,False
+LP-032,Greedy Credit Card Variable,credit_card,12.4,False
+LP-033,Greedy Personal Green,personal,10.93,True
+LP-034,Greedy Business Fixed 5yr,business,12.17,True
+LP-035,Greedy Mortgage Premium,mortgage,13.04,False
+LP-036,Greedy Mortgage Fixed 5yr,mortgage,8.41,True
+LP-037,Greedy Auto Starter,auto,7.16,False
+LP-038,Greedy Auto Starter,auto,6.84,False
+LP-039,Greedy Mortgage Variable,mortgage,14.62,True
+LP-040,Greedy Personal Standard,personal,13.03,True
+LP-041,Greedy Personal Fixed 3yr,personal,4.64,True
+LP-042,Greedy Personal Standard,personal,7.83,True
+LP-043,Greedy Auto Green,auto,9.35,True
+LP-044,Greedy Mortgage Green,mortgage,13.81,True
+LP-045,Greedy Credit Card Starter,credit_card,10.96,True
+LP-046,Greedy Credit Card Starter,credit_card,12.98,True
+LP-047,Greedy Personal Green,personal,13.59,True
+LP-048,Greedy Personal Variable,personal,14.33,True
+LP-049,Greedy Personal Standard,personal,11.13,True
+LP-050,Greedy Credit Card Premium,credit_card,4.66,True
+LP-051,Greedy Business Starter,business,5.15,True
+LP-052,Greedy Auto Standard,auto,9.0,True
+LP-053,Greedy Mortgage Standard,mortgage,12.31,True
+LP-054,Greedy Auto Variable,auto,13.02,True
+LP-055,Greedy Auto Green,auto,12.22,True
+LP-056,Greedy Business Variable,business,10.65,True
+LP-057,Greedy Business Fixed 5yr,business,7.63,True
+LP-058,Greedy Credit Card Fixed 5yr,credit_card,10.15,False
+LP-059,Greedy Business Starter,business,4.95,False
+LP-060,Greedy Auto Fixed 3yr,auto,12.79,True
+LP-061,Greedy Personal Pro,personal,9.24,False
+LP-062,Greedy Auto Premium,auto,6.2,False
+LP-063,Greedy Mortgage Pro,mortgage,12.18,True
+LP-064,Greedy Mortgage Fixed 3yr,mortgage,8.97,True
+LP-065,Greedy Credit Card Starter,credit_card,12.3,True
+LP-066,Greedy Auto Starter,auto,14.77,False
+LP-067,Greedy Auto Fixed 5yr,auto,8.08,False
+LP-068,Greedy Mortgage Premium,mortgage,10.92,False
+LP-069,Greedy Business Variable,business,11.86,True
+LP-070,Greedy Personal Standard,personal,14.33,True
+LP-071,Greedy Auto Standard,auto,14.6,True
+LP-072,Greedy Personal Pro,personal,7.97,True
+LP-073,Greedy Credit Card Fixed 5yr,credit_card,14.55,True
+LP-074,Greedy Personal Variable,personal,6.82,False
+LP-075,Greedy Auto Starter,auto,10.96,False
+LP-076,Greedy Credit Card Premium,credit_card,14.68,True
+LP-077,Greedy Auto Starter,auto,5.32,False
+LP-078,Greedy Auto Pro,auto,10.33,True
+LP-079,Greedy Mortgage Starter,mortgage,6.85,True
+LP-080,Greedy Business Green,business,12.81,True
+LP-081,Greedy Personal Standard,personal,6.68,True
+LP-082,Greedy Personal Variable,personal,13.81,False
+LP-083,Greedy Auto Pro,auto,9.9,False
+LP-084,Greedy Personal Starter,personal,6.83,True
+LP-085,Greedy Auto Variable,auto,5.82,False
+LP-086,Greedy Business Starter,business,12.34,True
+LP-087,Greedy Mortgage Fixed 3yr,mortgage,7.88,False
+LP-088,Greedy Credit Card Premium,credit_card,6.87,True
+LP-089,Greedy Personal Fixed 3yr,personal,7.55,False
+LP-090,Greedy Credit Card Green,credit_card,12.9,True
+LP-091,Greedy Credit Card Pro,credit_card,7.08,True
+LP-092,Greedy Mortgage Green,mortgage,7.08,False
+LP-093,Greedy Mortgage Fixed 3yr,mortgage,14.18,True
+LP-094,Greedy Personal Standard,personal,10.81,True
+LP-095,Greedy Business Pro,business,6.32,True
+LP-096,Greedy Mortgage Fixed 5yr,mortgage,10.38,True
+LP-097,Greedy Credit Card Variable,credit_card,10.35,True
+LP-098,Greedy Business Fixed 5yr,business,9.29,False
+LP-099,Greedy Auto Variable,auto,10.94,True
+LP-100,Greedy Mortgage Variable,mortgage,10.91,True
