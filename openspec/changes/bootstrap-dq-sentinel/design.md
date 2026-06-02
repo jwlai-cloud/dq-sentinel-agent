@@ -30,11 +30,15 @@ Architectural pressure points surfaced in exploration:
 
 ## Decisions
 
-### D1 — Orchestrator: Google Cloud Agent Builder (Vertex AI)
+### D1 — Orchestrator: Agent Builder via the ADK code-first path (Vertex AI)
 
-Rules require it ("powered by Gemini and Google Cloud Agent Builder"). Trade-off: less local iteration speed than ADK, steeper learning curve. Mitigation: prototype the agent loop end-to-end in week 1 with mocked tools before wiring real Fivetran/BQ in week 2.
+Rules require it ("powered by Gemini and Google Cloud Agent Builder"). Refined 2026-06-02: **ADK (Agent Development Kit) is the code-first arm of Agent Builder**, deployed on the Vertex AI Agent Engine runtime — using ADK satisfies the requirement (it is the Agent Builder SDK, not a competing stack). This reconciles the requirement with a fast local dev loop. Earlier worry about ADK "violating" the rule was wrong: ADK + Gemini *API direct without Agent Engine* would be borderline, but ADK + Agent Engine is squarely Agent Builder.
 
-**Alternatives considered:** ADK + Gemini API direct (rejected: would violate the "powered by ... Agent Builder" rule, even if technically Google Cloud). Vertex AI Reasoning Engine direct (rejected: AB is the named primitive in rules).
+Why this matters: ADK's `McpToolset` consumes the Fivetran MCP server over stdio and supports `tool_filter` to expose only a chosen subset of tools to the model — this is the native mechanism that implements the structural approval gate (D4).
+
+Mitigation: prototype the loop with mocked tools in week 1, wire real Fivetran/BQ in week 2.
+
+**Alternatives considered:** Agent Builder no-code/console flows (rejected: can't express the per-step tool filtering + dual MCP instances the gate needs). Vertex AI Reasoning Engine direct without ADK (rejected: ADK gives the MCP toolset + filtering for free).
 
 ### D2 — LLM: Gemini 3.5 Flash pinned, single swappable constant
 
@@ -102,9 +106,9 @@ OSI-approved, commercial-use unrestricted (required by rules), patent grant (mat
 ## Risks / Trade-offs
 
 - **Agent Builder learning curve consumes week 1** → mitigate by following the `agent-starter-pack` template (`github.com/GoogleCloudPlatform/agent-starter-pack`) end-to-end on day 1, before touching Fivetran/BQ.
-- **Fivetran MCP doesn't speak Agent Builder's transport natively** → spike day 2: stand up the MCP server, confirm AB can register it (likely via Reasoning Engine custom tool wrapper if direct MCP isn't supported). If blocked, wrap the MCP tools as plain Python functions calling MCP via stdio subprocess.
-- **Free-tier Fivetran sync interval too long for `sync_connection` to feel instant** → verify week 1; D7 fallback covers if so.
-- **Gemini 2.5 Pro tool-call latency on 9 Fivetran tools + 1 BQ tool + 1 proposal tool may be slow** → cap tool count visible to the model per step (only register the tools relevant to that step in the AB orchestration graph).
+- ~~**Fivetran MCP doesn't speak Agent Builder's transport natively**~~ RESOLVED: ADK `McpToolset` consumes it over stdio (Open-Q2).
+- ~~**Free-tier Fivetran sync interval too long for `sync_connection`**~~ RESOLVED: on-demand "Sync Now" confirmed on trial tier (Open-Q1).
+- **Gemini 3.5 Flash tool-call latency on 9 Fivetran tools + 1 BQ tool + 1 proposal tool may be slow** → use ADK `tool_filter` to expose only the tools relevant to the current step, keeping the per-turn tool set small.
 - **`dq_sentinel.baselines` schema migrates as we add checks** → ship initial schema with a `metric_version` column; future checks add rows with new versions, no DDL needed.
 - **Single GCP project for demo + dev** → cheap and simple; risk is accidental quota burn. Mitigation: hard-set BQ query cost cap via custom quota.
 - **License field on GitHub About requires standard LICENSE filename + recognized SPDX text** → use the verbatim Apache-2.0 text, no modifications.
@@ -122,8 +126,8 @@ If a P0 capability is at risk in week 3, drop scope to the single end-to-end "sc
 
 ## Open Questions
 
-1. **Fivetran free-tier on-demand `sync_connection` allowed?** Verify week 1 day 1.
-2. **Does Agent Builder register MCP servers directly, or do we need a wrapper?** Verify week 1 day 2.
-3. **GitHub repo public from day 1 or stay private until week 3?** Default: public from day 1 (rules require public for submission; nothing private worth hiding).
-4. **Frontend: Mesop vs Streamlit?** Defer to week 3; Agent Builder's bundled chat UI carries weeks 1–2.
-5. **Gemini 3 ship date** — monitor; if it ships before 2026-06-08, swap `GEMINI_MODEL_ID` and re-test diagnosis quality on the 6 break scenarios.
+1. ~~**Fivetran free-tier on-demand `sync_connection` allowed?**~~ RESOLVED 2026-06-02: yes, "Sync Now" works on the trial tier. Demo strategy D7 viable.
+2. ~~**Does Agent Builder register MCP servers directly, or do we need a wrapper?**~~ RESOLVED 2026-06-02: use ADK `McpToolset` with `StdioConnectionParams` launching `uvx fivetran-mcp`, and `tool_filter` to expose only the per-step tool subset. No bespoke wrapper. Two toolset instances: read-only (`FIVETRAN_ALLOW_WRITES=false` + read tool_filter) for steps 1-5, write-enabled for step 6.
+3. **GitHub repo public from day 1 or stay private until week 3?** RESOLVED: public from day 1 (`github.com/jwlai-cloud/dq-sentinel-agent`).
+4. **Frontend: Mesop vs Streamlit?** Still open; defer to week 3.
+5. ~~**Gemini 3 ship date**~~ RESOLVED 2026-06-02: Gemini 3.5 Flash is GA; pinned in D2.
