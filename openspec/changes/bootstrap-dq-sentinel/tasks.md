@@ -26,12 +26,12 @@
 
 ## 4. Capability: `bigquery-dq-checks` (Week 2, days 4-5)
 
-- [ ] 4.1 Implement `dq_check_row_count(connection_id, table)` parameterized BQ tool returning structured result per spec
-- [ ] 4.2 Implement `dq_check_null_rate(connection_id, table, column)` parameterized BQ tool
-- [ ] 4.3 Implement `dq_check_freshness(connection_id, table, sla_minutes)` parameterized BQ tool
-- [ ] 4.4 Implement `seed_baselines(connection_id)` operation writing rows into `dq_sentinel.baselines`
-- [ ] 4.5 Implement table-allowlist validation (rejects unknown table names; rejects SQL-in-table-name attacks per spec scenario)
-- [ ] 4.6 Set BQ custom quota on the GCP project to cap demo cost
+- [x] 4.1 `dq_check_row_count` (dq_sentinel/bq.py) — vs baseline, >30% deviation fails. Verified.
+- [x] 4.2 `dq_check_null_rate` — vs baseline, >2x fails (any-null fails when baseline=0). Verified: base_apr 0→100% caught.
+- [x] 4.3 `dq_check_freshness` — minutes since MAX(_fivetran_synced) vs SLA. Verified.
+- [x] 4.4 `seed_baselines(table, connection_id)` — writes row_count + per-column null_rate + schema_fingerprint via load job (read-after-write reliable). Seeded account_holders + transactions. Also added `dq_check_schema_mismatch` (INFORMATION_SCHEMA vs baseline fingerprint) — the reliable schema-drift detector per 2.5 finding.
+- [x] 4.5 Table-allowlist (`KNOWN_TABLES`) + column validation against INFORMATION_SCHEMA; unknown table/column raises. No free-form SQL reaches BQ.
+- [ ] 4.6 Set BQ custom quota on the GCP project to cap demo cost (low priority — tiny dataset, credits ample)
 
 ## 5. Capability: `agent-loop` (Week 3, days 1-2)
 
