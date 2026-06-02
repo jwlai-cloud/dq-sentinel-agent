@@ -36,11 +36,18 @@ Rules require it ("powered by Gemini and Google Cloud Agent Builder"). Trade-off
 
 **Alternatives considered:** ADK + Gemini API direct (rejected: would violate the "powered by ... Agent Builder" rule, even if technically Google Cloud). Vertex AI Reasoning Engine direct (rejected: AB is the named primitive in rules).
 
-### D2 — LLM: Gemini 2.5 Pro pinned, single swappable constant
+### D2 — LLM: Gemini 3.5 Flash pinned, single swappable constant
 
-Gemini 3 not confirmed shipped by 2026-05-20. Pin 2.5 Pro now, expose as `GEMINI_MODEL_ID` constant in one config file; swap day-of if 3 ships. Reasoning depth needed (multi-signal correlation in step 4), so Pro over Flash even if latency hurts.
+Updated 2026-06-02 after checking live Vertex AI pricing. Gemini 3-series shipped: the GA flagship is **Gemini 3.5 Flash** (`gemini-3.5-flash`); there is no "3.5 Pro" — the only 3-series Pro tier is `gemini-3.1-pro-preview` (Preview). Pin **Gemini 3.5 Flash** via the `GEMINI_MODEL_ID` constant in one config module.
 
-**Alternatives:** Gemini Flash for cost/latency (rejected: diagnosis quality on multi-signal inputs is the headline judging item). Gemini 2.0 (rejected: 2.5 Pro is the latest stable as of 2026-05-20).
+Rationale:
+- Cost vs 2.5 Pro is a wash for our volume (3.5 Flash $1.50 in / $9 out per 1M; 2.5 Pro $1.25 / $10; a diagnosis run ≈ $0.05 either way — single-digit dollars over the whole hackathon against $1.6k credit).
+- Newer generation, faster (Flash arch), and a stronger judging story ("built on Gemini 3.5") than 2.5 Pro.
+- GA, not Preview → stable through the 2026-06-11 deadline.
+
+Escalation path if diagnosis quality on multi-signal inputs proves insufficient in testing: swap the constant to `gemini-3.1-pro-preview` (deeper reasoning, Preview risk accepted for the final days only).
+
+**Alternatives:** Gemini 2.5 Pro (rejected: older gen, no cost advantage, weaker recency story). Gemini 3 Flash Preview / 2.5 Flash-Lite (rejected: cheaper but lower reasoning, and diagnosis quality is the headline judging item). Gemini 3.1 Pro Preview as the default (rejected: Preview instability not worth it unless 3.5 Flash underperforms).
 
 ### D3 — Diagnosis contract: tool-call, not parsed JSON
 
@@ -59,6 +66,8 @@ Effects:
 `propose_remediation` (D3) is **not** a Fivetran write tool. It is an internal tool whose only side effect is to render the proposal to the user and await approval. On approval, application code translates the validated args into the corresponding Fivetran MCP write tool call (`sync_connection`, `resync_tables`, etc.). On reject, the loop returns to step 4 with the rejection reason as additional context.
 
 This makes the gate unbypassable: Gemini physically cannot invoke a Fivetran write tool directly because those tools are not registered in its tool set. They are registered only on the post-approval execution path.
+
+**Server-level reinforcement (found during the 2026-06-02 MCP spike):** the Fivetran MCP server honours a `FIVETRAN_ALLOW_WRITES` env var (default `false`) that disables every write tool at the server boundary. So the gate is enforced at two layers: (1) steps 1-5 talk to a **read-only MCP instance** (`FIVETRAN_ALLOW_WRITES=false`) — even a prompt-injected model call to `sync_connection` is rejected by the server; (2) step 6 uses a separate **write-enabled** invocation path that only runs after explicit approval. Two instances / two env configs, not one shared process.
 
 **Alternatives:** "Soft" gate where Gemini has write tools but is prompted not to call them (rejected: PRD calls out the gate as structural — soft gates fail under prompt injection or model drift). HITL via Agent Builder's built-in approval UI (preferred where AB supports it; if not, render via frontend with a callback).
 
