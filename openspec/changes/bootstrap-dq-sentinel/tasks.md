@@ -42,8 +42,8 @@
 
 ## 6. Capability: `diagnosis-and-remediation` (Week 3, days 3-4)
 
-- [ ] 6.1 Define `propose_remediation` tool schema per spec; register only in step 4
-- [ ] 6.2 Implement payload validation with up-to-2 retries on invalid payloads
+- [x] 6.1 `propose_remediation` tool (dq_sentinel/diagnose.py) — typed params (Literal enums for severity/action) ARE the diagnosis schema (design D3). Internal tool, no Fivetran side effect. Verified: Gemini 3.5 Flash diagnosed the live loan_products drift → action=resync_tables, targets=[loan_products], severity=HIGH, evidence citing real numbers.
+- [◐] 6.2 `validate_payload()` implemented (action/targets/manual/severity rules). Verified PASS on the live proposal. Still TODO: the up-to-2-retry loop (wires into the agent-loop step 4 control flow, section 5).
 - [ ] 6.3 Implement approval-gate UI: severity badge, root cause, evidence list, exact MCP call preview, approve/reject/modify-targets controls
 - [ ] 6.4 Implement step 7 verification: poll `get_connection_state` at 30s intervals, 30-min timeout, re-run originally-failing checks, record before/after metrics
 - [ ] 6.5 Implement TTR breakdown (total vs agent-attributable) per spec scenario
