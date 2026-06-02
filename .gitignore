@@ -14,6 +14,10 @@
 *.pem
 service-account*.json
 credentials*.json
+.secrets/
+
+# Python venv / build
+.venv/
 
 # Python
 __pycache__/

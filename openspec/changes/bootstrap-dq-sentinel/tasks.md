@@ -11,10 +11,10 @@
 
 ## 2. Agent Builder + Fivetran MCP Spike (Week 1, days 3-5)
 
-- [ ] 2.1 Clone `github.com/GoogleCloudPlatform/agent-starter-pack`; run the hello-world Agent Builder agent end-to-end against a custom Python tool
+- [x] 2.1 ADK hello-world end-to-end — DONE 2026-06-02. Lean hand-rolled ADK project (`dq_sentinel/{config,agent}.py`, not the starter-pack) instead of agent-starter-pack (fewer files, full control). Gemini 3.5 Flash → ADK `McpToolset` (read-only `tool_filter`) → Fivetran MCP → live `list_connections` → coherent health report. Auth via runtime SA `dq-sentinel-runtime@agent-era` (key in `.secrets/`, gitignored; same SA for Cloud Run later). KEY GOTCHA: Gemini 3.x served from Vertex location `global`, not `us-central1` (regional → 403). Wiring smoke (`scripts/smoke_agent.py`) proves tool_filter exposes exactly the 5 read tools, zero write tools leaked.
 - [x] 2.2 Stand up Fivetran MCP server (`fivetran/fivetran-mcp`) standalone; confirm `list_connections` returns the live connections — DONE 2026-06-02. `uvx --from git+https://github.com/fivetran/fivetran-mcp fivetran-mcp`, server v1.27.2, 77 tools (all 9 PRD Appendix A tools present), auth via `FIVETRAN_API_KEY`+`FIVETRAN_API_SECRET` (two separate env vars — NOT the combined base64 blob). Returns full status payload (setup_state, sync_state, schema_status, warnings[], schedule). Quirk: every tool requires a `schema_file` arg = a fixed path string the caller must pass to confirm it read the OpenAPI def (e.g. `open-api-definitions/connections/list_connections.json`).
 - [ ] 2.3 Spike: register Fivetran MCP into Agent Builder. Decide between direct MCP support vs Python-subprocess wrapper (resolves Open Question 2 in design.md). NOTE: MCP exposes all 77 tools at once; the structural approval gate (design D4) needs us to surface only read tools to Gemini in steps 1-5. Lever found: `FIVETRAN_ALLOW_WRITES=false` env var disables all write tools at the server level — run a read-only MCP instance for steps 1-5, a write-enabled path only for step 6.
-- [ ] 2.4 Pin `GEMINI_MODEL_ID = "gemini-3.5-flash"` in a single config module; verify availability in chosen region (decision updated in design.md D2, 2026-06-02)
+- [x] 2.4 Pin `GEMINI_MODEL_ID = "gemini-3.5-flash"` in a single config module (`dq_sentinel/config.py`) — DONE. Verified available + callable on Vertex at location `global` (not us-central1).
 - [ ] 2.5 Demo break scenario #1 (schema rename) on the Sheets source; confirm it lands in BQ with the expected nulls
 
 ## 3. Capability: `fivetran-integration` (Week 2, days 1-3)
