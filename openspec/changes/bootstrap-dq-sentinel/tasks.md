@@ -52,7 +52,7 @@
 
 ## 7. End-to-End Demo Scenario (Week 3, day 5)
 
-- [ ] 7.1 Wire the schema-drift + null-spike scenario (PRD §8 scenario 1) end-to-end: seed → break sheet → trigger agent → approve → verify
+- [◐] 7.1 Full RESOLVED loop proven end-to-end on LIVE infra 2026-06-04 via the agent-resolvable **stale-data / freshness** scenario (no source mutation needed): loosen_signal (account_holders) freshness 4541min>180 → Gemini diagnosed stale-data → `resync_connection` → approved → real Fivetran resync → freshness re-check 4541→0 → `status=resolved` (TTR total 3m11s / agent 2m34s / sync_wait 37s). Key learning: only a full resync rewrites `_fivetran_synced`; a no-op sync of an unchanged Sheet does not. The PRD §8 scenario-1 schema-drift variant additionally needs a source-revert (rename the Sheet header back) to reach resolved — that's the manual pre-stage step for the recorded demo.
 - [ ] 7.2 Wire the freshness-violation scenario (pause connector)
 - [ ] 7.3 Wire the data-loss scenario (delete 50% of orders rows)
 - [ ] 7.4 Confirm each scenario completes within the on-demand sync budget verified in task 1.6
