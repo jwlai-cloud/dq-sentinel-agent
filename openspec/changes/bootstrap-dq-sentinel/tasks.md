@@ -37,14 +37,14 @@
 
 - [x] 5.1 7-step orchestration — `dq_sentinel/loop.py` `run_loop()`. Deterministic app-code sequencing (ADK = Agent Builder code-first per D1); Gemini invoked only in step 4. SCAN/DETECT/INSPECT (read MCP + BQ) → DIAGNOSE (validated, ≤2 retry) → APPROVE (injected callback) → ACT (act.py) → VERIFY (verify.py). 26/26 mocked-orchestration checks pass (`scripts/test_loop.py`). Live read path + baseline gate verified against loan_products (`scripts/run_loop.py`).
 - [x] 5.2 "baseline missing" precondition — `run_loop` checks `bq.get_baseline(table,'row_count')` for every target table before INSPECT; terminates `status=baseline_missing` with a clear message, no inspect/diagnose/act. Verified live (loan_products has no clean baseline yet).
-- [ ] 5.3 Implement manual trigger endpoint ("Run scan now") callable from frontend — backend entrypoint is `run_loop(connection_id, approval=...)`; needs frontend wiring.
+- [x] 5.3 Manual trigger endpoint — `POST /api/runs {connection_id}` (dq_sentinel/web/api.py) starts a detached run; the SPA's "Run scan now" button + connection picker (`GET /api/connections`) call it. Live-verified.
 - [x] 5.4 Incident report struct + emission — every `run_loop` exit returns the spec report (triggered_at, detected_issues, root_cause_hypothesis, remediation_proposed, approval_decision, action_taken, verification_result, before/after_metrics, time_to_resolution) with a `status` of resolved/unresolved/no-issue/baseline_missing/diagnosis_failed.
 
 ## 6. Capability: `diagnosis-and-remediation` (Week 3, days 3-4)
 
 - [x] 6.1 `propose_remediation` tool (dq_sentinel/diagnose.py) — typed params (Literal enums for severity/action) ARE the diagnosis schema (design D3). Internal tool, no Fivetran side effect. Verified: Gemini 3.5 Flash diagnosed the live loan_products drift → action=resync_tables, targets=[loan_products], severity=HIGH, evidence citing real numbers.
 - [x] 6.2 `validate_payload()` + up-to-2-retry loop — `loop.diagnose_validated()` runs DIAGNOSE up to 3 attempts (1 + 2 retries), feeding validation errors back via the new `diagnose(payload, feedback=...)` arg; all-invalid → `verification_result=diagnosis_failed`. Verified in test_loop.
-- [◐] 6.3 Approval-gate backend done; UI pending. `act.planned_call()` produces the exact MCP tool+args preview; the approval callback contract (`approve`/`reject`+reason/`modify`+targets) is implemented and exercised (`scripts/run_loop.py` renders severity/root-cause/evidence/preview to console). Frontend rendering = section on Frontend.
+- [x] 6.3 Approval-gate UI — `dq_sentinel/web/templates/index.html` renders the gate card (severity badge, root cause, evidence list, the exact `act.planned_call` MCP tool+args preview, approve / reject+reason / modify-targets). The gate is bridged to HTTP via an asyncio.Future (web/runs.py): run_loop runs as a detached task, its `approval` callback parks on a Future, `POST /api/runs/{id}/decision` resolves it. Architecture chosen by a 16-agent design workflow (Decoupled Job Model); hardened against a 23-agent adversarial review (0 blockers). Modify-targets bounded to the allowlist before any write. Proven: test_web_gate 15/15 + test_web_http 16/16 + live uvicorn smoke.
 - [x] 6.4 Step 7 verification — `dq_sentinel/verify.py`: poll loop (30s/30min defaults, configurable), re-run originally-failed checks via `bq.rerun()`, before/after metrics. DEVIATION: spec names `get_connection_state` but `GET /v1/connections/{id}/state` returns HTTP 405 live — poll `get_connection_details` instead (`status.sync_state` + `succeeded_at`/`failed_at`). Completion = `succeeded_at` advances past the pre-ACT value.
 - [x] 6.5 TTR breakdown — incident report `time_to_resolution` = {total, agent, sync_wait, *_seconds}; agent = total − sync_wait (verify reports `sync_wait_seconds` from the poll loop). Verified in test_loop.
 
@@ -59,7 +59,7 @@
 
 ## 8. Hosting + Submission (Week 4)
 
-- [ ] 8.1 Containerize agent + frontend; deploy to Cloud Run; confirm public hosted URL
+- [◐] 8.1 Containerize agent + frontend; deploy to Cloud Run; confirm public hosted URL — ARTIFACTS READY: `Dockerfile` (single uvicorn container, pre-baked fivetran-mcp, $PORT), `.dockerignore` (excludes .secrets), `deploy.sh` (bakes the 3 load-bearing flags: --no-cpu-throttling, --min/--max-instances=1; uses runtime SA + Secret Manager). NOT yet deployed (next step — the actual `gcloud run deploy`).
 - [ ] 8.2 Smoke test the hosted URL with one demo scenario
 - [ ] 8.3 Update `README.md`: actual hosted URL, screenshots, quickstart, license badge correct
 - [ ] 8.4 Record 3-minute demo video (English, narrated). Pre-stage break before recording per design.md D7
