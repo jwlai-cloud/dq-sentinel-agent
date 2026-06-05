@@ -31,6 +31,13 @@ from dq_sentinel.diagnose import diagnose, validate_payload
 #   {"decision": "approved"|"rejected"|"modified", "targets": [...], "reason": str}
 ApprovalFn = Callable[[dict[str, Any], dict[str, Any]], Awaitable[dict[str, Any]]]
 
+# A progress callback receives (stage, detail) at each step boundary. It is a
+# pure side-channel for UIs (the web layer streams it to the browser); when None
+# the loop behaves byte-identically — the CLI runner and every test pass None.
+# It MUST be cheap and non-blocking: it runs on the loop's event loop, including
+# inside verify's tight poll.
+ProgressFn = Callable[[str, dict[str, Any]], None]
+
 MAX_DIAGNOSIS_ATTEMPTS = 3  # 1 initial + 2 retries (spec diagnosis-and-remediation)
 
 
@@ -133,11 +140,17 @@ async def run_loop(
     connection_id: str,
     *,
     approval: ApprovalFn,
+    progress: ProgressFn | None = None,
     poll_interval: float = verify.POLL_INTERVAL_SECONDS,
     poll_timeout: float = verify.POLL_TIMEOUT_SECONDS,
 ) -> dict[str, Any]:
     """Execute the 7-step loop for one connection and return its incident report."""
     start = time.monotonic()
+
+    def emit(stage: str, **detail: Any) -> None:
+        if progress:
+            progress(stage, detail)
+
     report: dict[str, Any] = {
         "connection_id": connection_id,
         "triggered_at": _now_iso(),
@@ -165,9 +178,11 @@ async def run_loop(
         return report
 
     # STEP 1 SCAN + STEP 2 DETECT (Fivetran level)
+    emit("scanning", connection_id=connection_id)
     details = await connection_details(connection_id)
     report["fivetran_status"] = details.get("status", {})
     fivetran_issues = detect_fivetran_issues(details)
+    emit("detecting", fivetran_issues=fivetran_issues)
 
     # tables to inspect
     schema_name, tables = await connection_tables(connection_id)
@@ -183,6 +198,7 @@ async def run_loop(
         return finish("baseline_missing")
 
     # STEP 3 INSPECT
+    emit("inspecting", tables=tables)
     all_checks: list[dict[str, Any]] = []
     for t in tables:
         all_checks.extend(inspect_table(t))
@@ -216,6 +232,7 @@ async def run_loop(
     }
 
     # STEP 4 DIAGNOSE (validated, <=2 retries)
+    emit("diagnosing", table=primary_table, failed=len(payload["failed_checks"]))
     proposal, errs = await diagnose_validated(payload)
     if proposal is None:
         report["message"] = f"diagnosis failed validation after retries: {errs}"
@@ -252,6 +269,7 @@ async def run_loop(
     report["approval_decision"] = decision
 
     # STEP 6 ACT — capture pre-write sync markers for the verify poll
+    emit("acting", action=proposal.get("action"), targets=proposal.get("targets"))
     pre = await connection_details(connection_id)
     pre_succeeded = pre.get("succeeded_at")
     pre_failed = pre.get("failed_at")
@@ -268,6 +286,7 @@ async def run_loop(
         baseline_failed_at=pre_failed,
         interval=poll_interval,
         timeout=poll_timeout,
+        progress=progress,
     )
     report["verification_result"] = v["verification_result"]
     report["after_metrics"] = v.get("before_after", [])

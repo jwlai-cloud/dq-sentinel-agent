@@ -50,11 +50,15 @@ async def poll_until_synced(
     *,
     interval: float = POLL_INTERVAL_SECONDS,
     timeout: float = POLL_TIMEOUT_SECONDS,
+    progress: Any = None,
 ) -> dict[str, Any]:
     """Poll connection details until a NEW sync result appears past the baseline.
 
     Completion = `succeeded_at` advances beyond the pre-ACT value (-> "synced") or
     `failed_at` advances (-> "failed"). On timeout -> "timed_out".
+
+    `progress` (optional, sync callable (stage, detail)) is invoked once per poll
+    so a UI can show the sync wait advancing; None = byte-identical behaviour.
     """
     started = time.monotonic()
     polls = 0
@@ -62,6 +66,9 @@ async def poll_until_synced(
         details = await connection_details(connection_id)
         f = _sync_fields(details)
         polls += 1
+        if progress:
+            progress("verifying", {"poll": polls, "sync_state": f["sync_state"],
+                                   "elapsed_seconds": round(time.monotonic() - started, 1)})
         if f["failed_at"] and f["failed_at"] != baseline_failed_at:
             outcome = "failed"
         elif f["succeeded_at"] and f["succeeded_at"] != baseline_succeeded_at:
@@ -124,6 +131,7 @@ async def verify(
     baseline_failed_at: str | None = None,
     interval: float = POLL_INTERVAL_SECONDS,
     timeout: float = POLL_TIMEOUT_SECONDS,
+    progress: Any = None,
 ) -> dict[str, Any]:
     """Run step 7. Returns the verification block of the incident report.
 
@@ -138,6 +146,7 @@ async def verify(
             baseline_failed_at,
             interval=interval,
             timeout=timeout,
+            progress=progress,
         )
         if poll["result"] == "timed_out":
             return {

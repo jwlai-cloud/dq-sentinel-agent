@@ -1,0 +1,345 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>DQ Sentinel</title>
+<style>
+  :root {
+    --bg:#0c1018; --panel:#141b27; --panel2:#1b2433; --line:#27324a;
+    --ink:#e6edf6; --mut:#8b9bb4; --acc:#4f9dff; --ok:#37d399; --warn:#ffb454; --bad:#ff6b6b;
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font:14px/1.5 ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,sans-serif; }
+  header { padding:16px 24px; border-bottom:1px solid var(--line); display:flex; align-items:center; gap:12px; }
+  header h1 { font-size:18px; margin:0; letter-spacing:.3px; }
+  header .tag { color:var(--mut); font-size:12px; }
+  .wrap { display:grid; grid-template-columns: 1.4fr 1fr; gap:16px; padding:16px 24px; max-width:1280px; }
+  .col { display:flex; flex-direction:column; gap:16px; min-width:0; }
+  .card { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:16px; }
+  .card h2 { font-size:13px; text-transform:uppercase; letter-spacing:.6px; color:var(--mut); margin:0 0 12px; }
+  select, input[type=text], textarea { width:100%; background:var(--panel2); color:var(--ink);
+    border:1px solid var(--line); border-radius:7px; padding:9px 10px; font:inherit; }
+  button { cursor:pointer; border:1px solid var(--line); background:var(--panel2); color:var(--ink);
+    border-radius:7px; padding:9px 14px; font:inherit; font-weight:600; }
+  button.primary { background:var(--acc); border-color:var(--acc); color:#04101f; }
+  button.ok { background:var(--ok); border-color:var(--ok); color:#03130c; }
+  button.bad { background:transparent; border-color:var(--bad); color:var(--bad); }
+  button:disabled { opacity:.5; cursor:not-allowed; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .badge { display:inline-block; padding:2px 9px; border-radius:20px; font-size:11px; font-weight:700;
+    text-transform:uppercase; letter-spacing:.4px; }
+  .b-CRITICAL,.b-bad { background:rgba(255,107,107,.16); color:var(--bad); }
+  .b-HIGH { background:rgba(255,140,90,.16); color:#ff8c5a; }
+  .b-MEDIUM,.b-warn { background:rgba(255,180,84,.16); color:var(--warn); }
+  .b-LOW,.b-ok { background:rgba(55,211,153,.16); color:var(--ok); }
+  .b-mut { background:rgba(139,155,180,.16); color:var(--mut); }
+  .steps { display:flex; flex-direction:column; gap:6px; }
+  .step { display:flex; gap:10px; align-items:baseline; font-size:13px; }
+  .step .dot { width:8px; height:8px; border-radius:50%; background:var(--acc); flex:none; transform:translateY(2px); }
+  .step .t { color:var(--mut); font-variant-numeric:tabular-nums; font-size:11px; min-width:62px; }
+  pre { background:#0a0e16; border:1px solid var(--line); border-radius:8px; padding:12px; overflow:auto;
+    font:12px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; color:#cfe0f5; margin:0; }
+  ul.ev { margin:6px 0 0; padding-left:18px; } ul.ev li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  th,td { text-align:left; padding:7px 8px; border-bottom:1px solid var(--line); }
+  th { color:var(--mut); font-weight:600; }
+  .muted { color:var(--mut); }
+  .hidden { display:none; }
+  .gate { border:1px solid var(--acc); box-shadow:0 0 0 1px rgba(79,157,255,.25), 0 8px 30px rgba(0,0,0,.4); }
+  .hist-item { border:1px solid var(--line); border-radius:8px; padding:10px 12px; margin-bottom:8px; cursor:pointer; }
+  .hist-item:hover { border-color:var(--acc); }
+  .kv { display:grid; grid-template-columns:auto 1fr; gap:4px 14px; font-size:12.5px; }
+  .kv b { color:var(--mut); font-weight:600; }
+  @media (max-width:920px){ .wrap{ grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<header>
+  <h1>🛡️ DQ Sentinel</h1>
+  <span class="tag">autonomous data-quality agent · Fivetran → BigQuery · human-approved remediation</span>
+</header>
+
+<div class="wrap">
+  <div class="col">
+    <!-- Trigger -->
+    <div class="card">
+      <h2>Run a scan</h2>
+      <div class="row">
+        <select id="conn" style="flex:1; min-width:240px;"></select>
+        <button id="runBtn" class="primary" onclick="startRun()">Run scan now</button>
+      </div>
+      <div id="connErr" class="muted" style="margin-top:8px;"></div>
+    </div>
+
+    <!-- Live run -->
+    <div id="runCard" class="card hidden">
+      <h2>Run <span id="runStatus" class="badge b-mut">—</span></h2>
+      <div id="steps" class="steps"></div>
+    </div>
+
+    <!-- Approval gate (headline) -->
+    <div id="gateCard" class="card gate hidden">
+      <h2>⏸ Approval required — step 5 gate</h2>
+      <div class="row" style="justify-content:space-between;">
+        <div><span id="sev" class="badge b-mut">—</span> <span id="rootCause" style="font-weight:600;"></span></div>
+      </div>
+      <p class="muted" style="margin:8px 0 4px;">Evidence</p>
+      <ul id="evidence" class="ev"></ul>
+      <p class="muted" style="margin:12px 0 4px;">Fivetran write that will execute on approval</p>
+      <pre id="mcpPreview">—</pre>
+      <div id="targetsWrap" style="margin-top:12px;">
+        <p class="muted" style="margin:0 0 4px;">Targets (edit to modify before approving)</p>
+        <input id="targets" type="text" placeholder="table1, table2" />
+      </div>
+      <div class="row" style="margin-top:14px;">
+        <button id="approveBtn" class="ok" onclick="decide('approved')">Approve &amp; execute</button>
+        <button id="modifyBtn" onclick="decide('modified')">Approve with edited targets</button>
+        <button id="rejectBtn" class="bad" onclick="reject()">Reject</button>
+        <span id="gateMsg" class="muted"></span>
+      </div>
+    </div>
+
+    <!-- Incident report -->
+    <div id="reportCard" class="card hidden">
+      <h2>Incident report <span id="finalStatus" class="badge b-mut">—</span></h2>
+      <div id="ttr" class="kv" style="margin-bottom:12px;"></div>
+      <div id="metricsWrap"></div>
+    </div>
+  </div>
+
+  <div class="col">
+    <div class="card">
+      <h2>Incident history</h2>
+      <div id="history" class="muted">No runs yet.</div>
+    </div>
+  </div>
+</div>
+
+<script>
+let runId = null, timer = null, submitting = false;
+
+async function j(url, opts) {
+  const r = await fetch(url, opts);
+  const body = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(body.detail || r.statusText);
+  return body;
+}
+
+async function loadConnections() {
+  const sel = document.getElementById('conn');
+  const err = document.getElementById('connErr');
+  try {
+    const { connections, error } = await j('/api/connections');
+    sel.innerHTML = '';
+    if (error) err.textContent = 'Fivetran scan error: ' + error;
+    if (!connections.length) {
+      sel.innerHTML = '<option value="">(no connections found)</option>';
+      return;
+    }
+    for (const c of connections) {
+      const o = document.createElement('option');
+      o.value = c.id;
+      o.textContent = `${c.schema || c.id}  ·  ${c.service || ''}  ·  ${c.sync_state || ''}`;
+      sel.appendChild(o);
+    }
+  } catch (e) { err.textContent = 'Could not load connections: ' + e.message; }
+}
+
+async function startRun() {
+  const cid = document.getElementById('conn').value;
+  if (!cid) return;
+  document.getElementById('runBtn').disabled = true;
+  document.getElementById('reportCard').classList.add('hidden');
+  document.getElementById('gateCard').classList.add('hidden');
+  try {
+    const { run_id } = await j('/api/runs', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ connection_id: cid }),
+    });
+    runId = run_id;
+    document.getElementById('runCard').classList.remove('hidden');
+    startPolling();
+  } catch (e) {
+    document.getElementById('connErr').textContent = 'Start failed: ' + e.message;
+    document.getElementById('runBtn').disabled = false;
+  }
+}
+
+function startPolling() {
+  if (timer) clearInterval(timer);
+  poll();
+  timer = setInterval(poll, 1000);
+}
+
+const TERMINAL = ['resolved','unresolved','no-issue','baseline_missing','diagnosis_failed','error','orphaned','done'];
+
+async function poll() {
+  if (!runId) return;
+  let snap;
+  try { snap = await j('/api/runs/' + runId); } catch (e) { return; }
+  render(snap);
+  if (TERMINAL.includes(snap.status)) {
+    clearInterval(timer); timer = null;
+    document.getElementById('runBtn').disabled = false;
+    loadHistory();
+  }
+}
+
+function render(s) {
+  setBadge('runStatus', s.status, s.status);
+  // progress steps
+  const steps = document.getElementById('steps');
+  steps.innerHTML = '';
+  for (const p of (s.progress_log || [])) {
+    const d = document.createElement('div'); d.className = 'step';
+    const detail = p.stage === 'verifying'
+      ? `polling sync · attempt ${p.detail.poll} · ${p.detail.elapsed_seconds}s`
+      : Object.entries(p.detail || {}).map(([k,v]) => `${k}=${fmt(v)}`).join('  ');
+    d.innerHTML = `<span class="t">${clock(p.ts)}</span><span class="dot"></span>`+
+      `<span><b>${p.stage}</b> <span class="muted">${detail}</span></span>`;
+    steps.appendChild(d);
+  }
+  // gate
+  const gate = document.getElementById('gateCard');
+  if (s.status === 'awaiting_approval' && s.proposal) {
+    gate.classList.remove('hidden');
+    setBadge('sev', s.proposal.severity, s.proposal.severity);
+    document.getElementById('rootCause').textContent = s.proposal.root_cause || '';
+    const ev = document.getElementById('evidence'); ev.innerHTML = '';
+    for (const e of (s.proposal.evidence || [])) { const li = document.createElement('li'); li.textContent = e; ev.appendChild(li); }
+    const pc = s.planned_call || {};
+    document.getElementById('mcpPreview').textContent = pc.tool
+      ? pc.tool + '(' + JSON.stringify(pc.arguments, null, 2) + ')'
+      : 'MANUAL — no Fivetran write. ' + (pc.manual_instructions || '');
+    const tw = document.getElementById('targetsWrap');
+    if (pc.tool) { tw.classList.remove('hidden'); document.getElementById('targets').value = (s.proposal.targets || []).join(', '); }
+    else tw.classList.add('hidden');
+    setGateButtons(false);
+    document.getElementById('gateMsg').textContent = '';
+  } else {
+    gate.classList.add('hidden');
+    submitting = false;
+  }
+  // report
+  if (s.report) renderReport(s);
+}
+
+function renderReport(s) {
+  const r = s.report;
+  document.getElementById('reportCard').classList.remove('hidden');
+  setBadge('finalStatus', s.status, s.status);
+  const ttr = s.time_to_resolution || r.time_to_resolution || {};
+  const kv = document.getElementById('ttr');
+  kv.innerHTML = '';
+  const rows = [
+    ['Root cause', r.root_cause_hypothesis || '—'],
+    ['Action', r.action_taken ? (r.action_taken.tool || r.action_taken.action) : '—'],
+    ['Verification', r.verification_result || '—'],
+    ['Total time', ttr.total || '—'],
+    ['Agent time', ttr.agent || '—'],
+    ['Sync wait', ttr.sync_wait || '—'],
+    ['Human wait', ttr.human_wait || (ttr.human_wait_seconds!=null ? ttr.human_wait_seconds+'s' : '—')],
+  ];
+  for (const [k,v] of rows) kv.innerHTML += `<b>${k}</b><span>${v}</span>`;
+  // before/after metrics
+  const ba = (r.verification && r.verification.before_after) || r.after_metrics || [];
+  const mw = document.getElementById('metricsWrap');
+  if (ba.length) {
+    let h = '<table><tr><th>Check</th><th>Table</th><th>Column</th><th>Before</th><th>After</th><th></th></tr>';
+    for (const m of ba) {
+      const ok = m.after_passed;
+      h += `<tr><td>${m.check_name||''}</td><td>${m.table||''}</td><td>${m.column||'—'}</td>`+
+           `<td>${fmt(m.before_value)}</td><td>${fmt(m.after_value)}</td>`+
+           `<td><span class="badge ${ok?'b-ok':'b-bad'}">${ok?'pass':'fail'}</span></td></tr>`;
+    }
+    mw.innerHTML = h + '</table>';
+  } else {
+    mw.innerHTML = '<p class="muted">'+(r.message || 'No DQ checks to compare.')+'</p>';
+  }
+}
+
+async function decide(decision) {
+  if (submitting) return;
+  submitting = true; setGateButtons(true);
+  document.getElementById('gateMsg').textContent = 'submitting…';
+  const targets = document.getElementById('targets').value.split(',').map(t=>t.trim()).filter(Boolean);
+  try {
+    await j('/api/runs/' + runId + '/decision', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision, targets, reason: '' }),
+    });
+    // do NOT assume immediate state change — trust the next poll (race note).
+  } catch (e) {
+    document.getElementById('gateMsg').textContent = 'error: ' + e.message;
+    submitting = false; setGateButtons(false);
+  }
+}
+
+async function reject() {
+  if (submitting) return;
+  const reason = prompt('Reason for rejecting (optional):') || '';
+  submitting = true; setGateButtons(true);
+  document.getElementById('gateMsg').textContent = 'submitting…';
+  try {
+    await j('/api/runs/' + runId + '/decision', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ decision: 'rejected', targets: [], reason }),
+    });
+  } catch (e) {
+    document.getElementById('gateMsg').textContent = 'error: ' + e.message;
+    submitting = false; setGateButtons(false);
+  }
+}
+
+function setGateButtons(disabled) {
+  for (const id of ['approveBtn','modifyBtn','rejectBtn'])
+    document.getElementById(id).disabled = disabled;
+}
+
+async function loadHistory() {
+  try {
+    const { incidents } = await j('/api/runs');
+    const h = document.getElementById('history');
+    if (!incidents.length) { h.innerHTML = '<span class="muted">No runs yet.</span>'; return; }
+    h.innerHTML = '';
+    for (const inc of incidents) {
+      const ttr = inc.time_to_resolution || {};
+      const div = document.createElement('div'); div.className = 'hist-item';
+      div.innerHTML = `<div class="row" style="justify-content:space-between;">`+
+        `<b>${inc.connection_id || ''}</b><span class="badge ${badgeClass(inc.status)}">${inc.status}</span></div>`+
+        `<div class="muted" style="margin-top:4px;">${inc.root_cause_hypothesis || inc.message || '—'}</div>`+
+        `<div class="muted" style="margin-top:2px; font-size:11.5px;">${inc.triggered_at||''} · total ${ttr.total||'—'} · agent ${ttr.agent||'—'}</div>`;
+      div.onclick = () => { document.getElementById('reportCard').classList.remove('hidden');
+        renderReport({ report: inc, status: inc.status, time_to_resolution: inc.time_to_resolution }); };
+      h.appendChild(div);
+    }
+  } catch (e) {}
+}
+
+// helpers
+function setBadge(id, status, label) {
+  const el = document.getElementById(id);
+  el.className = 'badge ' + badgeClass(status);
+  el.textContent = (label || status || '—').replace(/_/g,' ');
+}
+function badgeClass(s) {
+  if (['resolved','LOW','passed'].includes(s)) return 'b-ok';
+  if (['unresolved','error','diagnosis_failed','baseline_missing','CRITICAL','orphaned'].includes(s)) return 'b-bad';
+  if (['awaiting_approval','HIGH','MEDIUM'].includes(s)) return 'b-HIGH';
+  return 'b-mut';
+}
+function fmt(v) {
+  if (v === null || v === undefined) return '—';
+  if (typeof v === 'number') return Number.isInteger(v) ? v : v.toFixed(4);
+  if (typeof v === 'object') return JSON.stringify(v);
+  return String(v);
+}
+function clock(ts) { const d = new Date(ts * 1000); return d.toLocaleTimeString(); }
+
+loadConnections();
+loadHistory();
+</script>
+</body>
+</html>

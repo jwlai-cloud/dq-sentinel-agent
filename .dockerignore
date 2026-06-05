@@ -1,0 +1,23 @@
+# never bake secrets into the image
+.secrets/
+*.json.key
+
+# local env / caches
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+
+# vcs + docs not needed at runtime
+.git/
+.github/
+openspec/
+docs/
+demo-data/
+scripts/
+*.md
+!README.md
+.claude/
+.agent/
+.codex/

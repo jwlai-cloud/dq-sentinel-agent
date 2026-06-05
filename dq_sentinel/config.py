@@ -11,6 +11,7 @@ reads them from the environment — it never reads a plaintext file.
 from __future__ import annotations
 
 import os
+import shlex
 
 # --- Model -----------------------------------------------------------------
 # Gemini 3.5 Flash: GA 3-series flagship. Escalate to "gemini-3.1-pro-preview"
@@ -27,12 +28,18 @@ BQ_DATASET = os.environ.get("BQ_DATASET", "dq_sentinel")  # US multi-region (Fiv
 VERTEX_LOCATION = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
 # --- Fivetran MCP ----------------------------------------------------------
-FIVETRAN_MCP_COMMAND = "uvx"
-FIVETRAN_MCP_ARGS = [
-    "--from",
-    "git+https://github.com/fivetran/fivetran-mcp",
-    "fivetran-mcp",
-]
+# Default: launch the server via uvx straight from git (local dev). In the Cloud
+# Run image the server is pre-installed at build time, so the Dockerfile sets
+# FIVETRAN_MCP_COMMAND=fivetran-mcp + FIVETRAN_MCP_ARGS="" to avoid a git clone /
+# ls-remote on every per-call subprocess spawn. The defaults below are
+# byte-identical to the previous hardcoded values (local + tests unaffected).
+FIVETRAN_MCP_COMMAND = os.environ.get("FIVETRAN_MCP_COMMAND", "uvx")
+FIVETRAN_MCP_ARGS = shlex.split(
+    os.environ.get(
+        "FIVETRAN_MCP_ARGS",
+        "--from git+https://github.com/fivetran/fivetran-mcp fivetran-mcp",
+    )
+)
 
 # Read tools exposed to the model in agent loop steps 1-5 (pre-approval).
 # Write tools are deliberately excluded here and only surfaced post-approval
