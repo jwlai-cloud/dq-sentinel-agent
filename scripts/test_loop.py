@@ -172,6 +172,7 @@ async def scenario_modified_targets():
                 "connection_id": cid, "targets": proposal["targets"]}
 
     async def approve_modified(proposal, planned):
+        # "extra" is NOT an inspected/allowlisted table -> must be filtered out
         return {"decision": "modified", "targets": ["loan_products", "extra"]}
 
     patches = base_patches()
@@ -185,7 +186,7 @@ async def scenario_modified_targets():
         r = await loop.run_loop("c", approval=approve_modified, poll_interval=0.01)
     finally:
         undo()
-    check("ACT used edited targets", acted.get("targets") == ["loan_products", "extra"], str(acted))
+    check("ACT used edited targets, non-allowlisted dropped", acted.get("targets") == ["loan_products"], str(acted))
     check("approval recorded approved", r["approval_decision"]["decision"] == "approved")
 
 

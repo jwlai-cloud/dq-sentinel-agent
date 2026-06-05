@@ -33,10 +33,27 @@ class DecisionReq(BaseModel):
     reason: str = ""
 
 
+MAX_ACTIVE_RUNS = 3
+
+
 @router.post("/runs", status_code=202)
 async def start_run(req: StartRunReq) -> dict[str, Any]:
     if not req.connection_id:
         raise HTTPException(400, "connection_id required")
+    # Cap concurrent runs (memory + Fivetran-cost guard on a public endpoint).
+    active = sum(1 for h in runs.RUNS.values() if h.status in runs.ACTIVE_STATUSES)
+    if active >= MAX_ACTIVE_RUNS:
+        raise HTTPException(429, f"too many active runs ({active}); try again shortly")
+    # Bound to a real connector in this Fivetran account. Best-effort: if the scan
+    # itself fails (e.g. no creds in local dev) we don't block the run.
+    try:
+        ids = {c.get("id") for c in await agent_loop.scan_all()}
+        if ids and req.connection_id not in ids:
+            raise HTTPException(400, f"unknown connection_id {req.connection_id!r}")
+    except HTTPException:
+        raise
+    except Exception:  # noqa: BLE001 — scan unavailable; skip validation
+        pass
     run_id = runs.start_run(req.connection_id)
     return {"run_id": run_id, "status": "detecting"}
 

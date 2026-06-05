@@ -157,7 +157,9 @@ async def verify(
                 "before_after": [],
             }
 
-    after = rerun_failed_checks(failed_checks)
+    # rerun_failed_checks hits BigQuery synchronously; offload so the event loop
+    # keeps serving the web poll/decision/heartbeat during the recheck.
+    after = await asyncio.to_thread(rerun_failed_checks, failed_checks)
     all_pass = all(c.get("passed") for c in after)
     if executed_write and poll["result"] == "failed":
         result = "failed"

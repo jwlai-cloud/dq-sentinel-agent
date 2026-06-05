@@ -46,6 +46,13 @@ async def lifespan(app: FastAPI):
         task.cancel()
         with contextlib.suppress(asyncio.CancelledError):
             await task
+        # cancel + drain any in-flight run drivers so shutdown is clean
+        run_tasks = [h.task for h in list(runs.RUNS.values()) if h.task and not h.task.done()]
+        for t in run_tasks:
+            t.cancel()
+        for t in run_tasks:
+            with contextlib.suppress(asyncio.CancelledError, Exception):
+                await t
 
 
 app = FastAPI(title="DQ Sentinel", lifespan=lifespan)

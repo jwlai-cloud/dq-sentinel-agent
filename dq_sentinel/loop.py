@@ -20,6 +20,7 @@ baseline_missing / diagnosis_failed).
 """
 from __future__ import annotations
 
+import asyncio
 import time
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
@@ -191,8 +192,10 @@ async def run_loop(
         report["message"] = "no DQ-allowlisted tables on this connection"
         return finish("no-issue")
 
-    # baseline precondition (spec: terminate before inspect/diagnose/act)
-    missing = [t for t in tables if not _has_baseline(t)]
+    # baseline precondition (spec: terminate before inspect/diagnose/act).
+    # BQ calls are synchronous; offload so the event loop keeps serving the web
+    # poll / decision route / heartbeat while the run is a detached task.
+    missing = [t for t in tables if not await asyncio.to_thread(_has_baseline, t)]
     if missing:
         report["message"] = f"baseline missing for {missing} — run seed_baselines first"
         return finish("baseline_missing")
@@ -201,7 +204,7 @@ async def run_loop(
     emit("inspecting", tables=tables)
     all_checks: list[dict[str, Any]] = []
     for t in tables:
-        all_checks.extend(inspect_table(t))
+        all_checks.extend(await asyncio.to_thread(inspect_table, t))
     failed_checks = [c for c in all_checks if not c.get("passed")]
     report["detected_issues"] = fivetran_issues + failed_checks
     report["before_metrics"] = failed_checks
@@ -246,10 +249,20 @@ async def run_loop(
     for attempt in range(2):
         planned = act.planned_call(proposal, connection_id)
         decision = await approval(proposal, planned)
-        if decision.get("decision") == "modified" and decision.get("targets") is not None:
-            proposal = {**proposal, "targets": decision["targets"]}
-            report["remediation_proposed"] = proposal
-            decision = {**decision, "decision": "approved"}
+        if decision.get("decision") == "modified":
+            # Bound user-edited targets to this connection's inspected, allowlisted
+            # tables, then re-validate before promoting to an executable approval —
+            # a modify must NOT smuggle an arbitrary table into a real Fivetran write.
+            allowed = set(tables) & bq.KNOWN_TABLES
+            edited = [t for t in (decision.get("targets") or []) if t in allowed]
+            candidate = {**proposal, "targets": edited}
+            if not validate_payload(candidate):
+                proposal = candidate
+                report["remediation_proposed"] = proposal
+                decision = {"decision": "approved", "targets": edited}
+            else:
+                decision = {"decision": "rejected",
+                            "reason": f"edited targets failed validation/allowlist: {decision.get('targets')}"}
         if decision.get("decision") == "approved":
             break
         # rejected

@@ -61,6 +61,7 @@ class RunHandle:
     gate_enter_ts: float | None = None  # monotonic
     gate_exit_ts: float | None = None
     gate_wait_seconds: float = 0.0  # accumulated across re-diagnosis cycles
+    decision_submitted: bool = False  # guards duplicate decisions for the open gate
     # progress + result
     progress_log: list[dict[str, Any]] = field(default_factory=list)
     report: dict[str, Any] | None = None
@@ -100,6 +101,7 @@ def _make_approval(run_id: str) -> agent_loop.ApprovalFn:
         })
         # A FRESH future per gate entry — re-entrant for the reject→re-diagnose path.
         h.approval_future = h.loop.create_future()
+        h.decision_submitted = False
         decision = await h.approval_future  # coroutine PARKS here; no thread/request held
 
         h.gate_exit_ts = time.monotonic()
@@ -135,7 +137,16 @@ async def _drive(run_id: str, connection_id: str) -> None:
     except Exception as exc:  # noqa: BLE001 — surface any failure to the UI
         h.error = f"{type(exc).__name__}: {exc}"
         h.status = "error"
-        store.set_state(run_id, {"status": "error", "error": h.error})
+        error_report = {
+            "connection_id": connection_id,
+            "triggered_at": agent_loop._now_iso(),
+            "status": "error",
+            "message": h.error,
+            "verification_result": "error",
+        }
+        h.report = error_report
+        store.set_state(run_id, {"status": "error", "error": h.error, "report": error_report})
+        store.append_history(error_report)
 
 
 # --- public API (called by the FastAPI routes) ------------------------------
@@ -204,8 +215,9 @@ def submit_decision(
     if h is None:
         return {"ok": False, "error": "unknown run_id"}
     fut = h.approval_future
-    if fut is None or fut.done():
+    if fut is None or fut.done() or h.decision_submitted:
         return {"ok": False, "error": f"run is not awaiting approval (status={h.status})"}
+    h.decision_submitted = True  # synchronous guard against a duplicate decision
     payload = {"decision": decision, "targets": targets or [], "reason": reason}
     # Schedule set_result on the loop that owns the future — correct even if this
     # is ever invoked off-loop (sync route / threadpool).

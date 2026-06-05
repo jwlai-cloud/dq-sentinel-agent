@@ -107,6 +107,8 @@ def main() -> int:
 
             d = client.post(f"/api/runs/{rid}/decision", json={"decision": "approved", "targets": [], "reason": ""})
             check("POST /decision -> 200", d.status_code == 200, str(d.status_code))
+            dup = client.post(f"/api/runs/{rid}/decision", json={"decision": "approved"})
+            check("duplicate decision -> 409", dup.status_code == 409, str(dup.status_code))
 
             snap = poll_until(client, rid, lambda s: s.get("status") in ("resolved", "unresolved", "error"))
             check("status resolved", snap.get("status") == "resolved", snap.get("status"))

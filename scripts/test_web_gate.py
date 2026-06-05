@@ -145,7 +145,7 @@ async def scenario_modified():
         await wait_until(lambda: runs.snapshot(rid)["awaiting_decision"])
         runs.submit_decision(rid, "modified", targets=["loan_products", "extra_table"])
         await wait_until(lambda: runs.snapshot(rid)["status"] in ("resolved", "unresolved", "error"))
-        check("(c) ACT used edited targets", acts and acts[0]["targets"] == ["loan_products", "extra_table"], str(acts))
+        check("(c) ACT used edited targets, non-allowlisted dropped", acts and acts[0]["targets"] == ["loan_products"], str(acts))
         check("single write", len(acts) == 1, f"acts={len(acts)}")
     finally:
         undo()
