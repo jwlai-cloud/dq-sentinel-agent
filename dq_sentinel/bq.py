@@ -213,3 +213,21 @@ def dq_check_schema_mismatch(table: str, connection_id: str = "") -> dict[str, A
     passed = not added and not removed
     diff = {"added": added, "removed": removed}
     return _result("schema_mismatch", table, None, current_cols, base_cols, diff, passed, "MEDIUM")
+
+
+# --- re-run dispatch (step 7 VERIFY) ---------------------------------------
+# Maps a prior check result back to its check function so step 7 can re-run
+# exactly the checks that failed in step 3 (spec agent-loop / diagnosis §verify).
+def rerun(check: dict[str, Any]) -> dict[str, Any]:
+    """Re-run a single DQ check given a prior result dict (uses its table/column)."""
+    name = check.get("check_name")
+    table = check["table"]
+    if name == "row_count":
+        return dq_check_row_count(table)
+    if name == "null_rate":
+        return dq_check_null_rate(table, check["column"])
+    if name == "freshness":
+        return dq_check_freshness(table)
+    if name == "schema_mismatch":
+        return dq_check_schema_mismatch(table)
+    raise ValueError(f"cannot re-run unknown check {name!r}")

@@ -94,19 +94,25 @@ def diagnosis_agent() -> LlmAgent:
     )
 
 
-async def diagnose(payload: dict[str, Any]) -> dict[str, Any] | None:
+async def diagnose(payload: dict[str, Any], feedback: str | None = None) -> dict[str, Any] | None:
     """Run the diagnosis agent over a structured evidence payload and return the
     propose_remediation arguments (the structured diagnosis), or None if the model
-    never called the tool."""
+    never called the tool.
+
+    `feedback` carries a correction back to the model on a retry — either a
+    validation error from a prior malformed proposal (spec diagnosis-and-remediation
+    §"Parameter validation") or a user's rejection reason (spec agent-loop §"User
+    rejects remediation"). It is appended to the prompt so the next attempt revises.
+    """
     agent = diagnosis_agent()
     runner = InMemoryRunner(agent=agent, app_name="dq_sentinel_diagnose")
     session = await runner.session_service.create_session(
         app_name="dq_sentinel_diagnose", user_id="diag"
     )
-    msg = types.Content(
-        role="user",
-        parts=[types.Part(text="Diagnose this incident:\n" + json.dumps(payload, indent=2, default=str))],
-    )
+    text = "Diagnose this incident:\n" + json.dumps(payload, indent=2, default=str)
+    if feedback:
+        text += "\n\nIMPORTANT — revise based on this feedback:\n" + feedback
+    msg = types.Content(role="user", parts=[types.Part(text=text)])
     proposal: dict[str, Any] | None = None
     async for event in runner.run_async(user_id="diag", session_id=session.id, new_message=msg):
         if event.content and event.content.parts:

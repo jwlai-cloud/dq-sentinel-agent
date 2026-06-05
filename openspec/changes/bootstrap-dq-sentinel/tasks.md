@@ -20,9 +20,9 @@
 ## 3. Capability: `fivetran-integration` (Week 2, days 1-3)
 
 - [ ] 3.1 Register all four read tools (`list_connections`, `get_connection_details`, `get_connection_state`, `get_connection_schema_config`) into Agent Builder for pre-approval steps
-- [ ] 3.2 Implement application-side wrappers for the four write tools, NOT registered with the model
-- [ ] 3.3 Implement the action→write-tool routing per spec `fivetran-integration` §"Remediation execution mapping"
-- [ ] 3.4 Test: model in step 4 cannot enumerate or call any write tool
+- [x] 3.2 Application-side write path — `dq_sentinel/mcp_client.py` talks to the Fivetran MCP directly (no LLM): short-lived stdio session, auto-fills the `schema_file` arg by regex-parsing it from each tool's inputSchema description (it is NOT pinned via const/default, and is NOT derivable from the tool name — `get_connection_state`→`connection_state.json`). Write tools reached only via `allow_writes=True` sessions.
+- [x] 3.3 action→write-tool routing — `dq_sentinel/act.py` `ACTION_TO_TOOL` + `_request_body`. Each Fivetran write tool takes a `request_body` JSON *string* the server passes straight to the live REST API (no schema validation — confirmed by reading server.py). Bodies: sync_connection `{}`, resync_connection `{}` (full historical), resync_tables `{"schema": targets}` (the `/schemas/tables/resync` body's `schema` field holds *table* names), reload_schema `{"exclude_mode":"PRESERVE"}`. `planned_call()` renders the exact tool+args preview for the gate UI.
+- [x] 3.4 Model cannot call write tools — structural: Gemini is invoked ONLY in step 4 (diagnose.py, tool=propose_remediation). The loop (loop.py) never registers a Fivetran write tool with any model; writes go through app code (act.py). Reinforced by smoke_agent (read toolset leaks 0 write tools) + `FIVETRAN_ALLOW_WRITES=false` on read sessions.
 
 ## 4. Capability: `bigquery-dq-checks` (Week 2, days 4-5)
 
@@ -35,18 +35,20 @@
 
 ## 5. Capability: `agent-loop` (Week 3, days 1-2)
 
-- [ ] 5.1 Wire the 7-step orchestration in Agent Builder using only the registered read tools + the BQ DQ tools + `propose_remediation`
-- [ ] 5.2 Implement the "baseline missing" precondition that terminates the loop with a clear error
-- [ ] 5.3 Implement manual trigger endpoint ("Run scan now") callable from frontend
-- [ ] 5.4 Implement incident report struct + emission on every completed run (resolved / unresolved / no-issue)
+- [x] 5.1 7-step orchestration — `dq_sentinel/loop.py` `run_loop()`. Deterministic app-code sequencing (ADK = Agent Builder code-first per D1); Gemini invoked only in step 4. SCAN/DETECT/INSPECT (read MCP + BQ) → DIAGNOSE (validated, ≤2 retry) → APPROVE (injected callback) → ACT (act.py) → VERIFY (verify.py). 26/26 mocked-orchestration checks pass (`scripts/test_loop.py`). Live read path + baseline gate verified against loan_products (`scripts/run_loop.py`).
+- [x] 5.2 "baseline missing" precondition — `run_loop` checks `bq.get_baseline(table,'row_count')` for every target table before INSPECT; terminates `status=baseline_missing` with a clear message, no inspect/diagnose/act. Verified live (loan_products has no clean baseline yet).
+- [ ] 5.3 Implement manual trigger endpoint ("Run scan now") callable from frontend — backend entrypoint is `run_loop(connection_id, approval=...)`; needs frontend wiring.
+- [x] 5.4 Incident report struct + emission — every `run_loop` exit returns the spec report (triggered_at, detected_issues, root_cause_hypothesis, remediation_proposed, approval_decision, action_taken, verification_result, before/after_metrics, time_to_resolution) with a `status` of resolved/unresolved/no-issue/baseline_missing/diagnosis_failed.
 
 ## 6. Capability: `diagnosis-and-remediation` (Week 3, days 3-4)
 
 - [x] 6.1 `propose_remediation` tool (dq_sentinel/diagnose.py) — typed params (Literal enums for severity/action) ARE the diagnosis schema (design D3). Internal tool, no Fivetran side effect. Verified: Gemini 3.5 Flash diagnosed the live loan_products drift → action=resync_tables, targets=[loan_products], severity=HIGH, evidence citing real numbers.
-- [◐] 6.2 `validate_payload()` implemented (action/targets/manual/severity rules). Verified PASS on the live proposal. Still TODO: the up-to-2-retry loop (wires into the agent-loop step 4 control flow, section 5).
-- [ ] 6.3 Implement approval-gate UI: severity badge, root cause, evidence list, exact MCP call preview, approve/reject/modify-targets controls
-- [ ] 6.4 Implement step 7 verification: poll `get_connection_state` at 30s intervals, 30-min timeout, re-run originally-failing checks, record before/after metrics
-- [ ] 6.5 Implement TTR breakdown (total vs agent-attributable) per spec scenario
+- [x] 6.2 `validate_payload()` + up-to-2-retry loop — `loop.diagnose_validated()` runs DIAGNOSE up to 3 attempts (1 + 2 retries), feeding validation errors back via the new `diagnose(payload, feedback=...)` arg; all-invalid → `verification_result=diagnosis_failed`. Verified in test_loop.
+- [◐] 6.3 Approval-gate backend done; UI pending. `act.planned_call()` produces the exact MCP tool+args preview; the approval callback contract (`approve`/`reject`+reason/`modify`+targets) is implemented and exercised (`scripts/run_loop.py` renders severity/root-cause/evidence/preview to console). Frontend rendering = section on Frontend.
+- [x] 6.4 Step 7 verification — `dq_sentinel/verify.py`: poll loop (30s/30min defaults, configurable), re-run originally-failed checks via `bq.rerun()`, before/after metrics. DEVIATION: spec names `get_connection_state` but `GET /v1/connections/{id}/state` returns HTTP 405 live — poll `get_connection_details` instead (`status.sync_state` + `succeeded_at`/`failed_at`). Completion = `succeeded_at` advances past the pre-ACT value.
+- [x] 6.5 TTR breakdown — incident report `time_to_resolution` = {total, agent, sync_wait, *_seconds}; agent = total − sync_wait (verify reports `sync_wait_seconds` from the poll loop). Verified in test_loop.
+
+> Live ACT-write + VERIFY-poll against real Fivetran is the one path NOT yet run end-to-end: firing a real resync would mutate the staged loan_products drift fixture (and a resync can't fix a header-rename anyway — needs sheet revert + clean re-seed). Deferred to demo staging (task 7.1).
 
 ## 7. End-to-End Demo Scenario (Week 3, day 5)
 
