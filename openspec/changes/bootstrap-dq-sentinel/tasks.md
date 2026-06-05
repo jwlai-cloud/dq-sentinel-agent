@@ -59,7 +59,7 @@
 
 ## 8. Hosting + Submission (Week 4)
 
-- [◐] 8.1 Containerize agent + frontend; deploy to Cloud Run; confirm public hosted URL — ARTIFACTS READY: `Dockerfile` (single uvicorn container, pre-baked fivetran-mcp, $PORT), `.dockerignore` (excludes .secrets), `deploy.sh` (bakes the 3 load-bearing flags: --no-cpu-throttling, --min/--max-instances=1; uses runtime SA + Secret Manager). NOT yet deployed (next step — the actual `gcloud run deploy`).
+- [x] 8.1 Containerize + deploy to Cloud Run — DONE 2026-06-04. Hosted URL: https://dq-sentinel-sjsibsau7a-uc.a.run.app (service `dq-sentinel`, region us-central1, project agent-era, runtime SA dq-sentinel-runtime). `Dockerfile` (pre-baked fivetran-mcp), `deploy.sh` (3 load-bearing flags). VERIFIED on the deployed service: UI serves, live Fivetran scan works from the container (pre-baked MCP binary + Secret Manager creds), a run executes (→ baseline_missing), and the heartbeat advances between requests → `--no-cpu-throttling` confirmed (detached ACT/VERIFY + parked Future won't freeze). GOTCHA: Cloud Run's GFE intercepts a bare `/healthz` (returns a Google 404 before reaching the container) — health route moved to `/api/health`.
 - [ ] 8.2 Smoke test the hosted URL with one demo scenario
 - [ ] 8.3 Update `README.md`: actual hosted URL, screenshots, quickstart, license badge correct
 - [ ] 8.4 Record 3-minute demo video (English, narrated). Pre-stage break before recording per design.md D7

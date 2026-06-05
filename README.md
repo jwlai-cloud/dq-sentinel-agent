@@ -10,10 +10,12 @@ Built for the **[Google Cloud Rapid Agent Hackathon](https://rapid-agent.devpost
 
 ## Status
 
-Pre-implementation. Architecture and capability specs are version-controlled under [`openspec/`](openspec/). The authoritative product spec is [`docs/PRD.md`](docs/PRD.md).
+The 7-step agent loop (scan → detect → inspect → diagnose → **approve** → act → verify) and the web UI are built and deployed to Cloud Run. Architecture and capability specs are version-controlled under [`openspec/`](openspec/); the authoritative product spec is [`docs/PRD.md`](docs/PRD.md).
 
-- Hosted URL: _coming week 4_
+- Hosted URL: https://dq-sentinel-sjsibsau7a-uc.a.run.app
 - Demo video: _coming week 4_
+
+Run locally: `uv run uvicorn dq_sentinel.web.app:app` (needs `FIVETRAN_API_KEY`/`FIVETRAN_API_SECRET` + Vertex env). Deploy: `./deploy.sh`.
 
 ## What it does
 
