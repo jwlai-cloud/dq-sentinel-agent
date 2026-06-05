@@ -77,8 +77,11 @@ _INSTRUCTION = (
     "Mapping guidance: a schema_mismatch with a newly added column plus a null_rate "
     "spike on the old column = a source-side column rename; the fix is reload_schema "
     "(to pick up the new column) and/or resync_tables on the affected table to backfill. "
-    "A large row_count drop = data loss; propose resync_tables. A freshness violation or "
-    "failed sync = propose sync_connection. If the fix is downstream (dbt, dashboards) and "
+    "A large row_count drop = data loss; propose resync_tables. A freshness violation where "
+    "the data is simply STALE (the connection has not re-synced recently, no hard failure) = "
+    "propose resync_connection to force a full refresh — a normal incremental sync will not "
+    "rewrite unchanged rows' sync timestamps. A hard sync FAILURE (broken/failed sync state) = "
+    "propose sync_connection. If the fix is downstream (dbt, dashboards) and "
     "no Fivetran write helps, use action=manual with manual_instructions.\n"
     "Cite the actual numbers from the payload in your evidence."
 )

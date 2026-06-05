@@ -22,6 +22,11 @@ GEMINI_MODEL_ID = os.environ.get("GEMINI_MODEL_ID", "gemini-3.5-flash")
 GCP_PROJECT = os.environ.get("GCP_PROJECT", "agent-era")
 BQ_DATASET = os.environ.get("BQ_DATASET", "dq_sentinel")  # US multi-region (Fivetran-locked)
 
+# Freshness SLA: minutes since the latest _fivetran_synced before the freshness
+# check fails. Configurable (not hardcoded) so a demo can force a stale-data
+# detection that sync_connection then resolves. Default 3h.
+FRESHNESS_SLA_MINUTES = int(os.environ.get("DQ_FRESHNESS_SLA_MINUTES", "180"))
+
 # Vertex model serving location. Gemini 3.x models are served from `global`,
 # NOT a regional endpoint — us-central1 returns 403 "or it may not exist".
 # google-genai reads this from GOOGLE_CLOUD_LOCATION; kept here for reference.

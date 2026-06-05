@@ -25,7 +25,7 @@ import time
 from datetime import datetime, timezone
 from typing import Any, Awaitable, Callable
 
-from dq_sentinel import act, bq, mcp_client, verify
+from dq_sentinel import act, bq, config, mcp_client, verify
 from dq_sentinel.diagnose import diagnose, validate_payload
 
 # An approval callback receives (proposal, planned_call) and returns a decision:
@@ -103,7 +103,7 @@ def inspect_table(table: str) -> list[dict[str, Any]]:
     freshness, schema drift). Returns all check results."""
     results = [
         bq.dq_check_row_count(table),
-        bq.dq_check_freshness(table),
+        bq.dq_check_freshness(table, sla_minutes=config.FRESHNESS_SLA_MINUTES),
         bq.dq_check_schema_mismatch(table),
     ]
     for col in sorted(c for c in bq.columns(table) if not c.startswith("_")):
