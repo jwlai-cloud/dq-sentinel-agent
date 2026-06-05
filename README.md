@@ -17,6 +17,12 @@ The 7-step agent loop (scan → detect → inspect → diagnose → **approve** 
 
 Run locally: `uv run uvicorn dq_sentinel.web.app:app` (needs `FIVETRAN_API_KEY`/`FIVETRAN_API_SECRET` + Vertex env). Deploy: `./deploy.sh`.
 
+![The approval gate](docs/demo/img/gate.png)
+
+> The agent pauses at step 5 and shows the **exact** Fivetran write it wants to run — severity, root cause, evidence, and the precise MCP call — and waits for approve / reject / edit. No pipeline write happens until you click.
+
+**Demo:** deck ([`docs/demo/slides.html`](docs/demo/slides.html)) · 3-min recording script ([`docs/demo/DEMO_SCRIPT.md`](docs/demo/DEMO_SCRIPT.md)) · video ([`docs/demo/dq-sentinel-demo.mp4`](docs/demo/dq-sentinel-demo.mp4)) · Devpost writeup ([`docs/demo/DEVPOST.md`](docs/demo/DEVPOST.md)).
+
 ## What it does
 
 1. **SCAN** every Fivetran connection via MCP.
@@ -27,25 +33,39 @@ Run locally: `uv run uvicorn dq_sentinel.web.app:app` (needs `FIVETRAN_API_KEY`/
 6. **ACT** via Fivetran MCP write tools (`sync_connection`, `resync_tables`, `reload_schema`).
 7. **VERIFY** — re-run failed checks, emit incident report with before/after metrics and TTR.
 
+## How the approval gate stays unbypassable
+
+The diagnosis model is given exactly one tool — `propose_remediation` — and **zero** Fivetran write tools. The write path (`dq_sentinel/act.py`) runs in application code that is only reachable *after* a human approves. Over HTTP the gate is bridged with an `asyncio.Future`: a run is a detached `asyncio` task, its `approval` callback parks on a Future, and `POST /api/runs/{id}/decision` resolves it — so no request thread is held across the human wait or the multi-minute verify poll. Verified by tests (`scripts/test_web_gate.py`, `scripts/test_web_http.py`) and a 23-agent adversarial review (0 blockers).
+
 ## Stack
 
-- Orchestration: Google Cloud Agent Builder (Vertex AI)
-- LLM: Gemini 2.5 Pro (pinned, swappable to Gemini 3 when available)
-- Pipeline I/O: [fivetran/fivetran-mcp](https://github.com/fivetran/fivetran-mcp)
-- Data warehouse: BigQuery (Python client wrapped as a custom Agent Builder tool)
+- Orchestration: Google ADK (Agent Builder, code-first) on Cloud Run
+- LLM: Gemini 3.5 Flash on Vertex AI (served from `global`; model ID swappable in `dq_sentinel/config.py`)
+- Pipeline I/O: [fivetran/fivetran-mcp](https://github.com/fivetran/fivetran-mcp) over stdio (read tools to the model; write tools to app code only)
+- Data warehouse: BigQuery via the Python client — templated SQL, allowlist + `INFORMATION_SCHEMA` validation, no free-form SQL
+- Web: FastAPI + an `asyncio.Future` approval bridge + a thin polling UI
 - Demo source: Google Sheets → Fivetran → BigQuery
-- Hosting: Cloud Run
+- Hosting: Cloud Run (`./deploy.sh` bakes the load-bearing flags)
 
 ## Repository layout
 
 ```
+dq_sentinel/                 The agent
+  config.py                  Model ID, MCP command, thresholds (all swappable)
+  agent.py                   ADK McpToolset factories (read vs write split)
+  bq.py                      BigQuery DQ checks + baseline storage (templated SQL)
+  diagnose.py                Gemini DIAGNOSE step + propose_remediation contract
+  act.py                     Step 6 — approved proposal → one Fivetran write
+  verify.py                  Step 7 — poll sync, re-run checks, before/after + TTR
+  mcp_client.py              Direct Fivetran MCP client for app code (no LLM)
+  loop.py                    The 7-step orchestration + incident report
+  web/                       FastAPI app, asyncio.Future approval bridge, polling UI
+scripts/                     Run + test scripts (test_loop, test_web_gate, test_web_http, ...)
+Dockerfile, deploy.sh        Cloud Run deploy (pre-baked MCP, load-bearing flags)
 docs/PRD.md                  Product requirements (source of truth)
+docs/demo/                   Deck, recording script, screenshots, demo video, Devpost writeup
 openspec/                    Versioned architecture + capability specs
-  changes/                   Proposed and applied changes
-  specs/                     Current capability specs (populated as changes apply)
-demo-data/                   Seeded Greedy Bank demo data
-  generate.py                uv-runnable faker script (PEP-723 inline deps)
-  csv/                       Generated CSVs: 3 clean + 5 pre-broken variants
+demo-data/                   Seeded Greedy Bank demo data (3 clean + 5 pre-broken CSVs)
 LICENSE                      Apache-2.0
 ```
 

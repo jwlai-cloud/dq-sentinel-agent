@@ -18,9 +18,9 @@ Two scenarios. Pick ONE for the main take; (A) is fully automated and bullet-pro
 - The agent will diagnose stale data → propose `resync_connection` → on approval, resync refreshes timestamps → freshness passes → **resolved**.
 
 **Scenario B — schema drift (PRD §8 #1, the headline story).**
-- In the `loan_products` Google Sheet, the column header is renamed `base_apr` → `headline_apr` (already staged as a fixture).
-- Seed a clean baseline FIRST (before the rename) so the drift is detectable: `uv run python -c "from dq_sentinel import bq; bq.seed_baselines('loan_products')"` against clean data.
-- To reach **resolved** on camera: just before you click Approve, rename the Sheet header back to `base_apr`; the agent's resync then re-imports the corrected source → schema matches baseline → resolved. (Or narrate the diagnosis + approval and show the resync; the "resolved" frame needs the source corrected.)
+- The `loan_products` Google Sheet header is already renamed `base_apr` → `headline_apr` (staged fixture).
+- Clean baseline is already seeded (`scripts/seed_loan_products_clean_baseline.py`), so the drift is detectable. PROVEN diagnosis (live): Gemini → **HIGH**, root cause *"source column base_apr renamed to headline_apr"*, action `resync_tables(loan_products)` — citing the null spike (1.0 vs 0.0) + the added column. The gate previews `resync_tables({"connection_id":"subjected_synthesis","request_body":"{\"schema\":[\"loan_products\"]}"})`.
+- To reach **resolved** on camera: just before you click Approve, rename the Sheet header back to `base_apr`; the resync re-imports the corrected source → schema matches baseline → resolved. (If you don't revert, the run ends `unresolved` — still a great detect→diagnose→gate story, and shows the gate refusing to mask a real problem.)
 
 ---
 
