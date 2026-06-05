@@ -1,0 +1,115 @@
+1
+00:00:00,000 --> 00:00:03,200
+Data pipelines break silently.
+
+2
+00:00:03,200 --> 00:00:08,500
+A column gets renamed upstream, a sync goes stale —
+
+3
+00:00:08,500 --> 00:00:12,500
+and your dashboards are wrong before anyone notices.
+
+4
+00:00:12,500 --> 00:00:18,500
+DQ Sentinel is an autonomous data-quality agent that watches Fivetran pipelines,
+
+5
+00:00:18,500 --> 00:00:22,000
+inspects the data in BigQuery, and diagnoses the root cause with Gemini —
+
+6
+00:00:22,000 --> 00:00:26,500
+but it never writes anything without a human's say-so.
+
+7
+00:00:26,500 --> 00:00:31,000
+It's a seven-step loop, not a chatbot:
+
+8
+00:00:31,000 --> 00:00:35,500
+scan, detect, inspect, diagnose, approve, act, verify.
+
+9
+00:00:35,500 --> 00:00:41,000
+Gemini does the diagnosis; the Fivetran MCP server is the only way it touches pipelines.
+
+10
+00:00:41,000 --> 00:00:46,500
+The approval gate is structural — the model has no write tool until a human approves.
+
+11
+00:00:46,500 --> 00:00:50,500
+Here's the agent, running on Cloud Run.
+
+12
+00:00:50,500 --> 00:00:55,000
+I pick the transactions connection and hit Run scan now.
+
+13
+00:00:55,000 --> 00:01:00,500
+It scans Fivetran and runs data-quality checks in BigQuery against a rolling baseline,
+
+14
+00:01:00,500 --> 00:01:06,000
+and flags a freshness violation: this table's data is over three days stale.
+
+15
+00:01:06,000 --> 00:01:09,500
+Now it pauses.
+
+16
+00:01:09,500 --> 00:01:16,000
+Gemini diagnoses the cause: the connection is healthy, but a normal sync never refreshed the data.
+
+17
+00:01:16,000 --> 00:01:20,500
+It proposes a fix — a full re-sync.
+
+18
+00:01:20,500 --> 00:01:27,000
+Crucially, it shows me the exact Fivetran tool call it wants to run, with its arguments.
+
+19
+00:01:27,000 --> 00:01:32,500
+I can approve, reject, or edit the targets. Nothing is written until I click.
+
+20
+00:01:32,500 --> 00:01:36,000
+I'll approve.
+
+21
+00:01:36,000 --> 00:01:43,000
+Now — and only now — the agent executes the write through Fivetran's MCP server.
+
+22
+00:01:43,000 --> 00:01:50,000
+Then it verifies: it polls until the sync completes and re-runs the exact check that failed.
+
+23
+00:01:50,000 --> 00:01:55,500
+Freshness went from 4,541 minutes stale to zero.
+
+24
+00:01:55,500 --> 00:01:59,000
+Status: resolved.
+
+25
+00:01:59,000 --> 00:02:06,000
+And it splits time-to-resolution into agent time versus the sync wait — so the human time is honest.
+
+26
+00:02:06,000 --> 00:02:13,000
+Every run produces an incident report: what broke, the root cause, the action, and before-and-after metrics.
+
+27
+00:02:13,000 --> 00:02:19,500
+The approval gate means an autonomous agent you can actually trust with production pipelines.
+
+28
+00:02:19,500 --> 00:02:24,500
+Built on Gemini, Fivetran MCP, BigQuery, and Cloud Run.
+
+29
+00:02:24,500 --> 00:02:28,000
+Thanks for watching.

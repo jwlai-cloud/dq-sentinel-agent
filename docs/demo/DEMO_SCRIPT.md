@@ -5,6 +5,7 @@ Recordable screencast for the Devpost submission (Google Cloud Rapid Agent Hacka
 - **Hosted URL:** https://dq-sentinel-sjsibsau7a-uc.a.run.app
 - **Recommended capture:** QuickTime / OBS screen recording at 1280×720+, system audio off, mic on.
 - **Tip:** Slides (`slides.html`) can open in a second tab — cut between the live app and 2–3 slides (problem, architecture, results).
+- **Subtitles:** `dq-sentinel-demo.en.srt` (+ `.en.vtt`) hold this narration as 29 timed cues (ends ~2:28). Upload the `.srt` to YouTube as English captions. Timings follow the script's pacing — nudge them to match your actual narration (YouTube's caption editor or any SRT tool).
 
 ---
 
