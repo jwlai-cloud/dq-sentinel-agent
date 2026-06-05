@@ -66,7 +66,10 @@ app.include_router(api_router)
 app.include_router(views_router)
 
 
-@app.get("/healthz")
+# NOTE: must live under /api/* — Cloud Run's Google Front End intercepts a bare
+# /healthz before it reaches the container (returns a Google 404), while /api/*
+# routes pass through to the app.
+@app.get("/api/health")
 async def healthz() -> dict[str, Any]:
     now = time.time()
     last = _HEARTBEAT["last_beat_ts"]

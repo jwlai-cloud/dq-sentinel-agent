@@ -42,4 +42,4 @@ URL=$(gcloud run services describe "${SERVICE}" --project "${PROJECT}" --region 
 echo
 echo "Hosted URL: ${URL}"
 echo "Smoke test (run against the DEPLOYED service, not local — CPU-throttle stalls only show on Cloud Run):"
-echo "  curl -s ${URL}/healthz   # confirm beats advance between calls"
+echo "  curl -s ${URL}/api/health   # confirm beats advance between calls"

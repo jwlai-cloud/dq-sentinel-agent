@@ -88,8 +88,8 @@ def main() -> int:
         with TestClient(app) as client:
             print("\n# infra routes")
             check("GET / -> 200 html", client.get("/").status_code == 200)
-            hz = client.get("/healthz").json()
-            check("GET /healthz ok", hz.get("ok") is True, str(hz))
+            hz = client.get("/api/health").json()
+            check("GET /api/health ok", hz.get("ok") is True, str(hz))
             conns = client.get("/api/connections").json()
             check("GET /api/connections graceful (no creds)", "connections" in conns, str(conns)[:120])
 
