@@ -6,8 +6,8 @@ invoked here. Run with FIVETRAN_ALLOW_WRITES enabled so the write tools are
 visible to list_tools.
 
 Run:
-    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era --account=junwei.lai@gmail.com)
-    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era --account=junwei.lai@gmail.com)
+    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era)
+    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era)
     uv run scripts/show_write_tool_schemas.py
 """
 from __future__ import annotations

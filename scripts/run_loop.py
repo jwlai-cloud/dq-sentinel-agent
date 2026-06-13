@@ -8,8 +8,8 @@ non-interactively:
 Run (read-only end-to-end up to the gate, no write):
     export GOOGLE_APPLICATION_CREDENTIALS=.secrets/dq-sentinel-runtime.json
     export GOOGLE_GENAI_USE_VERTEXAI=true GOOGLE_CLOUD_PROJECT=agent-era GOOGLE_CLOUD_LOCATION=global
-    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era --account=junwei.lai@gmail.com)
-    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era --account=junwei.lai@gmail.com)
+    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era)
+    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era)
     DQ_APPROVAL=reject uv run scripts/run_loop.py subjected_synthesis
 """
 from __future__ import annotations

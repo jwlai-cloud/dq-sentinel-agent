@@ -8,8 +8,8 @@ or schema changes. Proves: write-enabled MCP invocation + poll-until-synced.
 Target defaults to the account_holders connection (auto-discovered by schema).
 
 Run:
-    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era --account=junwei.lai@gmail.com)
-    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era --account=junwei.lai@gmail.com)
+    export FIVETRAN_API_KEY=$(gcloud secrets versions access latest --secret=FIVETRAN_API_KEY --project=agent-era)
+    export FIVETRAN_API_SECRET=$(gcloud secrets versions access latest --secret=FIVETRAN_API_SECRET --project=agent-era)
     uv run scripts/test_act_verify_live.py
 """
 from __future__ import annotations

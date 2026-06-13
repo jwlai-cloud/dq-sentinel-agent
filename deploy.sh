@@ -16,7 +16,7 @@ set -euo pipefail
 PROJECT="${GOOGLE_CLOUD_PROJECT:-agent-era}"
 REGION="${REGION:-us-central1}"
 SERVICE="${SERVICE:-dq-sentinel}"
-ACCOUNT="${GCLOUD_ACCOUNT:-junwei.lai@gmail.com}"
+ACCOUNT="${GCLOUD_ACCOUNT:-$(gcloud config get-value account 2>/dev/null)}"
 RUNTIME_SA="dq-sentinel-runtime@${PROJECT}.iam.gserviceaccount.com"
 
 echo "Deploying ${SERVICE} to Cloud Run (project=${PROJECT}, region=${REGION})..."
