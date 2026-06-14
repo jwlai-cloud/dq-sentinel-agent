@@ -13,6 +13,10 @@
 #                         surfaces any run stranded by that window.)
 set -euo pipefail
 
+# Optional local overrides (e.g. GCLOUD_ACCOUNT=you@example.com). This file is
+# gitignored (.secrets/) so personal values never enter the public repo.
+[ -f .secrets/deploy.env ] && { set -a; . .secrets/deploy.env; set +a; }
+
 PROJECT="${GOOGLE_CLOUD_PROJECT:-agent-era}"
 REGION="${REGION:-us-central1}"
 SERVICE="${SERVICE:-dq-sentinel}"
